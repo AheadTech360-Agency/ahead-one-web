@@ -1,0 +1,167 @@
+/*
+ * AheadOne design tokens.
+ *
+ * One neutral greyscale, one accent (spruce teal), status hues for data only.
+ * Light values live on :root, dark values on [data-theme="dark"] (set on <html> by next-themes,
+ * which resolves "system" from prefers-color-scheme before first paint). Both selectors also
+ * work on any element, so a subtree can be forced into either theme (see /dev/components).
+ * Every text tier is checked to 4.5:1 on the surface it sits on.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Grounds and surfaces */
+  --bg: #f4f5f5; /* app frame: sidebar + top bar */
+  --surface: #ffffff; /* the working sheet */
+  --surface-raised: #ffffff; /* menus, popovers, dialogs */
+  --surface-sunken: #f7f8f8; /* wells, table hover, code */
+  --hover: rgb(20 22 24 / 0.045);
+  --active: #e8eaea; /* selected nav row, pressed */
+  --overlay: rgb(14 15 16 / 0.36);
+
+  /* Lines */
+  --border: #e5e7e8;
+  --border-subtle: #eff0f1; /* row rules */
+  --border-strong: #d2d5d7; /* control outlines */
+
+  /* Text */
+  --fg: #151617;
+  --fg-muted: #5c6166;
+  --fg-faint: #6c7176; /* placeholders, meta. 4.8:1 on white */
+  --fg-on-accent: #ffffff;
+
+  /* Accent: spruce teal */
+  --accent: #0a7672;
+  --accent-hover: #075f5c;
+  --accent-subtle: #e2f2f0;
+  --accent-text: #075f5c;
+
+  /* Focus */
+  --ring: #0a7672;
+  --ring-offset: #ffffff;
+
+  /* Status (data only) */
+  --danger: #c4242a;
+  --danger-hover: #a51d22;
+  --fg-on-danger: #ffffff;
+  --danger-subtle: #ffecea;
+  --danger-text: #9b1c20;
+  --warning: #b45309;
+  --warning-subtle: #fff4dc;
+  --warning-text: #8a3f06;
+  --success: #247b50;
+  --success-subtle: #def5e7;
+  --success-text: #145232;
+  --info: #3a69b0;
+  --info-subtle: #e6eefa;
+  --info-text: #234a85;
+
+  /* Priority */
+  --priority-urgent: #d02b2b;
+  --priority-high: #c96a06;
+  --priority-normal: #3a69b0;
+  --priority-low: #848a90;
+
+  /* Elevation: only what floats gets a shadow */
+  --shadow-xs: 0 1px 2px rgb(16 18 20 / 0.05);
+  --shadow-popover: 0 1px 3px rgb(16 18 20 / 0.06), 0 6px 20px rgb(16 18 20 / 0.08);
+  --shadow-dialog: 0 2px 6px rgb(16 18 20 / 0.06), 0 20px 56px rgb(16 18 20 / 0.16);
+
+  /* Radius (tight system, nested radii step down) */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Layout */
+  --sidebar-w: 248px;
+  --topbar-h: 44px;
+  --control-h-sm: 28px;
+  --control-h: 32px;
+  --control-h-lg: 36px;
+  --row-h: 36px;
+
+  /* Z-index scale */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-sidebar: 20;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
+
+  /* Motion */
+  --dur-instant: 80ms;
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 260ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0e0e0f;
+  --surface: #151516;
+  --surface-raised: #1b1b1d;
+  --surface-sunken: #1a1a1c;
+  --hover: rgb(255 255 255 / 0.05);
+  --active: #252527;
+  --overlay: rgb(0 0 0 / 0.56);
+
+  --border: #28282b;
+  --border-subtle: #202022;
+  --border-strong: #3a3a3e;
+
+  --fg: #ededee;
+  --fg-muted: #a7a8ac;
+  --fg-faint: #8e8f94;
+  --fg-on-accent: #04201e;
+
+  --accent: #2fb2ab;
+  --accent-hover: #4cc5be;
+  --accent-subtle: #0f2b29;
+  --accent-text: #5fcdc6;
+
+  --ring: #3fc1ba;
+  --ring-offset: #151516;
+
+  --danger: #e5566f;
+  --danger-hover: #ec7186;
+  --fg-on-danger: #1f0a0e;
+  --danger-subtle: #2c1a1e;
+  --danger-text: #f2909f;
+  --warning: #e09a3c;
+  --warning-subtle: #2b2113;
+  --warning-text: #f0b86a;
+  --success: #3fbf7a;
+  --success-subtle: #15291d;
+  --success-text: #6fd39b;
+  --info: #6c9be0;
+  --info-subtle: #17223a;
+  --info-text: #9dbdf0;
+
+  --priority-urgent: #f0606a;
+  --priority-high: #ec9a3e;
+  --priority-normal: #6c9be0;
+  --priority-low: #8e8f94;
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px rgb(0 0 0 / 0.5);
+  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.04), 0 24px 64px rgb(0 0 0 / 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}

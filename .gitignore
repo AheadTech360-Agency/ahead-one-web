@@ -1,0 +1,4 @@
+# Local env (root .gitignore also covers .env*)
+.env*.local
+# TypeScript incremental build info
+*.tsbuildinfo
