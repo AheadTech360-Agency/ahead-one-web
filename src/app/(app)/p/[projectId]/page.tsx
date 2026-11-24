@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { BoardSkeleton } from "@/components/skeletons";
+import { ProjectScreen } from "@/features/tasks/screens/project-screen";
 
-/** Project view (list, board, calendar) arrives with the task-views task. */
+export const metadata: Metadata = { title: "Project" };
+
 export default function ProjectPage() {
-  return <BoardSkeleton label="Loading project" />;
+  return (
+    <Suspense fallback={<BoardSkeleton label="Loading project" />}>
+      <ProjectScreen />
+    </Suspense>
+  );
 }

@@ -1,6 +1,5 @@
-import { ConversationSkeleton } from "@/components/skeletons";
+import { ConversationRoute } from "@/features/messages/messages-pane";
 
-/** Conversation view arrives with the messaging task; the skeleton holds its final layout. */
 export default function ConversationPage() {
-  return <ConversationSkeleton />;
+  return <ConversationRoute />;
 }

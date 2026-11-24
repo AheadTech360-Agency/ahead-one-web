@@ -11,12 +11,15 @@ export function SidebarSection({
   title,
   storageKey,
   action,
+  actions,
   children,
   className,
 }: {
   title: string;
   storageKey: string;
   action?: { label: string; onClick: () => void };
+  /** Custom header controls (for example a menu trigger), shown on hover like `action`. */
+  actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -54,6 +57,11 @@ export function SidebarSection({
           >
             <Plus aria-hidden />
           </IconButton>
+        )}
+        {actions && (
+          <div className="flex items-center opacity-0 group-hover/sec:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+            {actions}
+          </div>
         )}
       </div>
       <div id={`${id}-c`} hidden={collapsed}>

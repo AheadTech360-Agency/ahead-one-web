@@ -2,3 +2,15 @@
 .env*.local
 # TypeScript incremental build info
 *.tsbuildinfo
+node_modules
+
+# builds and local files
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+.env
+.env.*
+!.env.example
+.DS_Store

@@ -1,17 +1,12 @@
 "use client";
 
-import { Bell, CheckSquare, Hash, Home, Lock, MessagesSquare, Settings, Keyboard } from "lucide-react";
+import { Bell, CheckSquare, Home, Settings, Keyboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useConversations, useUnreadCount } from "@/lib/api/hooks";
-import type { Conversation } from "@/lib/api/types";
+import { useUnreadCount } from "@/lib/api/hooks";
 import { cn } from "@/lib/utils";
-import { useWorkspace } from "@/lib/workspace";
-import { Avatar } from "@/ui/avatar";
-import { CountBadge } from "@/ui/badge";
-import { Skeleton } from "@/ui/skeleton";
+import { SidebarMessages } from "@/features/messages/sidebar-messages";
 import { useShell } from "./shell-context";
-import { SidebarSection } from "./sidebar-section";
 import { SpacesTree } from "./spaces-tree";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 
@@ -54,78 +49,6 @@ function NavLink({
   );
 }
 
-function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: string; onNavigate?: () => void }) {
-  const pathname = usePathname();
-  const href = `/messages/${c.id}`;
-  const active = pathname === href;
-  const other = c.kind === "dm" ? c.members.find((m) => m.id !== meId) ?? c.members[0] : undefined;
-  const name = c.kind === "dm" ? other?.full_name || other?.email || "Direct message" : c.name ?? "Untitled channel";
-  const unread = c.unread_count > 0;
-  return (
-    <Link
-      href={href}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex h-[30px] items-center gap-2 rounded-sm px-2 text-13",
-        "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
-        active
-          ? "bg-active font-medium text-fg"
-          : unread
-            ? "font-semibold text-fg hover:bg-hover"
-            : "text-fg-muted hover:bg-hover hover:text-fg",
-      )}
-    >
-      {c.kind === "dm" && other ? (
-        <Avatar user={other} size="xs" decorative className="size-4 text-[8px]" />
-      ) : c.is_private ? (
-        <Lock className="size-3.5 shrink-0 text-fg-faint" aria-label="Private channel" />
-      ) : (
-        <Hash className="size-3.5 shrink-0 text-fg-faint" aria-hidden />
-      )}
-      <span className="min-w-0 flex-1 truncate">{name}</span>
-      {unread && <CountBadge count={c.unread_count} className="bg-fg text-surface" />}
-    </Link>
-  );
-}
-
-function MessagesSection({ onNavigate }: { onNavigate?: () => void }) {
-  const { workspaceId, me } = useWorkspace();
-  const conversations = useConversations(workspaceId);
-  const channels = conversations.data?.filter((c) => c.kind === "channel") ?? [];
-  const dms = conversations.data?.filter((c) => c.kind === "dm") ?? [];
-
-  const body = (list: Conversation[], empty: string) =>
-    conversations.isPending && workspaceId ? (
-      <div className="flex flex-col gap-1 py-1 pl-8" aria-hidden>
-        <Skeleton className="h-2.5 w-24" />
-        <Skeleton className="h-2.5 w-16" />
-      </div>
-    ) : conversations.isError || !workspaceId ? (
-      <p className="px-2 py-1 text-12 text-fg-faint">Unavailable right now.</p>
-    ) : list.length === 0 ? (
-      <p className="px-2 py-1 text-12 text-fg-faint">{empty}</p>
-    ) : (
-      <ul className="flex flex-col gap-px">
-        {list.map((c) => (
-          <li key={c.id}>
-            <ConversationLink c={c} meId={me?.user.id} onNavigate={onNavigate} />
-          </li>
-        ))}
-      </ul>
-    );
-
-  return (
-    <SidebarSection title="Messages" storageKey="messages">
-      <NavLink href="/messages" icon={MessagesSquare} label="All messages" exact onNavigate={onNavigate} />
-      <p className="mt-1.5 px-2 text-11 text-fg-faint">Channels</p>
-      {body(channels, "No channels yet.")}
-      <p className="mt-1.5 px-2 text-11 text-fg-faint">Direct messages</p>
-      {body(dms, "No conversations yet.")}
-    </SidebarSection>
-  );
-}
-
 /** Sidebar body, shared by the desktop column and the mobile drawer. */
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const unread = useUnreadCount();
@@ -148,7 +71,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           />
         </div>
         <div className="mt-5 flex flex-col gap-5">
-          <MessagesSection onNavigate={onNavigate} />
+          <SidebarMessages onNavigate={onNavigate} />
           <SpacesTree onNavigate={onNavigate} />
         </div>
       </nav>

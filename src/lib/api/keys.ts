@@ -26,3 +26,17 @@ export const qk = {
     search: (q: string) => ["ws", ws, "search", q] as const,
   }),
 };
+
+/*
+ * Messaging keys. Per-conversation data lives under ["chat", id] so a reconnect can refresh it
+ * all with one prefix; the conversation list stays under the workspace (qk.workspace(ws).conversations()).
+ */
+export const chatKeys = {
+  all: ["chat"] as const,
+  conversation: (id: string) => ["chat", id, "detail"] as const,
+  messages: (id: string) => ["chat", id, "messages"] as const,
+  readStates: (id: string) => ["chat", id, "read-states"] as const,
+  members: (id: string) => ["chat", id, "members"] as const,
+  attachmentUrl: (id: string) => ["chat", "attachment-url", id] as const,
+  browse: (ws: string) => ["ws", ws, "channels-browse"] as const,
+};

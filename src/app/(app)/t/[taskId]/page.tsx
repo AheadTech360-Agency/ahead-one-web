@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { DetailSkeleton } from "@/components/skeletons";
+import { TaskScreen } from "@/features/tasks/screens/task-screen";
 
-/** Task detail arrives with the task-detail task. */
+export const metadata: Metadata = { title: "Task" };
+
 export default function TaskPage() {
-  return <DetailSkeleton label="Loading task" />;
+  return (
+    <Suspense fallback={<DetailSkeleton label="Loading task" />}>
+      <TaskScreen />
+    </Suspense>
+  );
 }

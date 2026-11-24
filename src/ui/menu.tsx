@@ -158,3 +158,19 @@ export function ContextMenuItem({
 export function ContextMenuSeparator() {
   return <ContextPrimitive.Separator className="-mx-1 my-1 h-px bg-border" />;
 }
+
+/** Multi-select row: stays open on select (pass onSelect={(e) => e.preventDefault()}). */
+export function DropdownMenuCheckboxItem({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof MenuPrimitive.CheckboxItem>) {
+  return (
+    <MenuPrimitive.CheckboxItem className={cn(itemClass, "pr-8", className)} {...props}>
+      {children}
+      <MenuPrimitive.ItemIndicator className="absolute right-2 flex">
+        <Check className="!text-accent" aria-hidden />
+      </MenuPrimitive.ItemIndicator>
+    </MenuPrimitive.CheckboxItem>
+  );
+}

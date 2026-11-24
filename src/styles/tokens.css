@@ -64,6 +64,9 @@
   --priority-normal: #3a69b0;
   --priority-low: #848a90;
 
+  /* Charts: the one data hue (validated with danger as the second series) */
+  --chart-1: #0b8f87;
+
   /* Elevation: only what floats gets a shadow */
   --shadow-xs: 0 1px 2px rgb(16 18 20 / 0.05);
   --shadow-popover: 0 1px 3px rgb(16 18 20 / 0.06), 0 6px 20px rgb(16 18 20 / 0.08);
@@ -151,6 +154,8 @@
   --priority-high: #ec9a3e;
   --priority-normal: #6c9be0;
   --priority-low: #8e8f94;
+
+  --chart-1: #1f9d96;
 
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px rgb(0 0 0 / 0.5);

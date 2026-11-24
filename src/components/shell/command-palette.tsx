@@ -1,6 +1,5 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { Command } from "cmdk";
 import {
   ArrowLeft,
@@ -25,8 +24,8 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api/client";
 import { useTree } from "@/lib/api/hooks";
-import { qk } from "@/lib/api/keys";
-import type { Conversation, SearchResults } from "@/lib/api/types";
+import type { Conversation } from "@/lib/api/types";
+import { useSearch } from "@/features/tasks/api";
 import { cn } from "@/lib/utils";
 import { roleAtLeast, useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
@@ -226,14 +225,8 @@ function SearchMode({
 }) {
   const { workspaceId } = useWorkspace();
   const q = useDebounced(query.trim(), 200);
-  const enabled = Boolean(workspaceId) && q.length >= 2 && q.length <= 100;
-  const results = useQuery({
-    queryKey: qk.workspace(workspaceId ?? "").search(q),
-    queryFn: ({ signal }) =>
-      api<SearchResults>(`/v1/workspaces/${workspaceId}/search`, { query: { q }, signal }),
-    enabled,
-    staleTime: 10_000,
-  });
+  const results = useSearch(workspaceId, q);
+  const enabled = results.enabled;
 
   async function openDm(userId: string) {
     try {
@@ -292,7 +285,9 @@ function SearchMode({
                 {data.tasks.map((t) => (
                   <Command.Item key={t.id} value={`task-${t.id}`} className={itemClass} onSelect={() => go(`/t/${t.id}`)}>
                     <CheckSquare aria-hidden />
-                    <span className="min-w-0 flex-1 truncate">{t.title}</span>
+                    <span className={cn("min-w-0 flex-1 truncate", t.completed && "text-fg-muted line-through decoration-fg-faint")}>
+                      {t.title}
+                    </span>
                     <PriorityBadge priority={t.priority} iconOnly />
                     <span className="max-w-40 truncate text-12 text-fg-faint">{t.project_name}</span>
                   </Command.Item>
@@ -303,7 +298,7 @@ function SearchMode({
               <Command.Group heading="Projects" className={groupClass}>
                 {data.projects.map((p) => (
                   <Command.Item key={p.id} value={`project-${p.id}`} className={itemClass} onSelect={() => go(`/p/${p.id}`)}>
-                    <FolderKanban aria-hidden />
+                    <FolderKanban aria-hidden style={{ color: p.color }} />
                     <span className="min-w-0 flex-1 truncate">{p.name}</span>
                     <span className="truncate text-12 text-fg-faint">{p.space_name}</span>
                   </Command.Item>

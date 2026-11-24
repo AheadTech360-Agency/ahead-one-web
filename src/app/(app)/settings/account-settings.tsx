@@ -20,6 +20,7 @@ import { Select } from "@/ui/select";
 import { Skeleton, SkeletonRows } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { toast } from "@/ui/toaster";
+import { BrowserPushControl } from "@/features/push/push-controls";
 
 const TABS = ["profile", "appearance", "notifications"] as const;
 type Tab = (typeof TABS)[number];
@@ -347,6 +348,7 @@ function NotificationPrefsForm({ initial }: { initial: NotificationPrefs }) {
           ))}
         </tbody>
       </table>
+      <BrowserPushControl />
       <Switch
         label="Daily digest"
         description="One email each morning with what's due and what changed."

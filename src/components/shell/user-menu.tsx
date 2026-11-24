@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSupabase } from "@/lib/supabase/client";
+import { unregisterPushOnSignOut } from "@/features/push/push";
 import { useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
 import {
@@ -28,6 +29,8 @@ export function useSignOut() {
   const router = useRouter();
   const qc = useQueryClient();
   return async () => {
+    // Remove this browser's push token while the session can still authorise the request.
+    await unregisterPushOnSignOut();
     try {
       await getSupabase().auth.signOut();
     } catch {

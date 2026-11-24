@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ListPageSkeleton } from "@/components/skeletons";
+import { ListScreen } from "@/features/tasks/screens/list-screen";
 
-/** List view arrives with the task-views task. */
+export const metadata: Metadata = { title: "List" };
+
 export default function ListPage() {
-  return <ListPageSkeleton label="Loading list" />;
+  return (
+    <Suspense fallback={<ListPageSkeleton label="Loading list" />}>
+      <ListScreen />
+    </Suspense>
+  );
 }

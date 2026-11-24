@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { api, errorMessage } from "@/lib/api/client";
+import { errorMessage } from "@/lib/api/client";
+import { useCreateTask } from "@/features/tasks/api";
+import { dateOnlyIso } from "@/features/tasks/lib/dates";
 import { useMembers, useTree } from "@/lib/api/hooks";
-import type { CreateTask, Priority, Task } from "@/lib/api/types";
+import type { Priority } from "@/lib/api/types";
 import { useWorkspace } from "@/lib/workspace";
 import { PRIORITIES, PriorityBadge, priorityLabel } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -32,12 +33,12 @@ export function CreateTaskDialog() {
 
 function CreateTaskForm({ onDone }: { onDone: () => void }) {
   const router = useRouter();
-  const qc = useQueryClient();
+  const pathname = usePathname();
   const { workspaceId } = useWorkspace();
   const tree = useTree(workspaceId);
   const members = useMembers(workspaceId);
   const [title, setTitle] = useState("");
-  const [listId, setListId] = useState<string | undefined>();
+  const [picked, setPicked] = useState<string | undefined>();
   const [priority, setPriority] = useState<Priority>("normal");
   const [due, setDue] = useState<Date | null>(null);
   const [assignees, setAssignees] = useState<string[]>([]);
@@ -49,19 +50,16 @@ function CreateTaskForm({ onDone }: { onDone: () => void }) {
       .flatMap((p) => p.lists.map((l) => ({ value: l.id, label: `${p.name} / ${l.name}`, description: s.name }))),
   );
 
-  const create = useMutation({
-    mutationFn: (body: CreateTask) =>
-      api<Task>(`/v1/lists/${listId}/tasks`, { method: "POST", body }),
-    onSuccess: (task) => {
-      void qc.invalidateQueries({ queryKey: ["ws", workspaceId, "my-tasks"] });
-      toast.success("Task created", {
-        description: task.title,
-        action: { label: "Open", onClick: () => router.push(`/t/${task.id}`) },
-      });
-      onDone();
-    },
-    onError: (e) => setErrors({ form: errorMessage(e) }),
-  });
+  // Default to the list (or the project's first list) on screen.
+  const [, seg, routeId] = pathname.split("/");
+  const fromRoute =
+    seg === "l"
+      ? listOptions.find((o) => o.value === routeId)?.value
+      : seg === "p"
+        ? (tree.data ?? []).flatMap((s) => s.projects).find((p) => p.id === routeId)?.lists[0]?.id
+        : undefined;
+  const listId = picked ?? fromRoute;
+  const create = useCreateTask();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,13 +68,28 @@ function CreateTaskForm({ onDone }: { onDone: () => void }) {
     if (!listId) next.list = "Choose where the task goes.";
     setErrors(next);
     if (next.title || next.list) return;
-    create.mutate({
-      title: title.trim(),
-      priority,
-      due_at: due ? due.toISOString() : undefined,
-      due_has_time: due ? false : undefined,
-      assignee_ids: assignees.length ? assignees : undefined,
-    });
+    create.mutate(
+      {
+        listId: listId!,
+        body: {
+          title: title.trim(),
+          priority,
+          due_at: due ? dateOnlyIso(due) : undefined,
+          due_has_time: due ? false : undefined,
+          assignee_ids: assignees.length ? assignees : undefined,
+        },
+      },
+      {
+        onSuccess: (task) => {
+          toast.success("Task created", {
+            description: task.title,
+            action: { label: "Open", onClick: () => router.push(`/t/${task.id}`) },
+          });
+          onDone();
+        },
+        onError: (e) => setErrors({ form: errorMessage(e) }),
+      },
+    );
   }
 
   return (
@@ -109,7 +122,7 @@ function CreateTaskForm({ onDone }: { onDone: () => void }) {
           <Select
             value={listId}
             onValueChange={(v) => {
-              setListId(v);
+              setPicked(v);
               if (errors.list) setErrors((x) => ({ ...x, list: undefined }));
             }}
             options={listOptions}

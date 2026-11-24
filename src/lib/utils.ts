@@ -1,5 +1,14 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/*
+ * The type scale (text-11 ... text-24, see globals.css) must be registered as font sizes,
+ * or tailwind-merge reads `text-13` as a colour and drops a real colour such as
+ * `text-fg-on-accent` from the same class list.
+ */
+const twMerge = extendTailwindMerge({
+  extend: { classGroups: { "font-size": [{ text: ["11", "12", "13", "14", "16", "20", "24"] }] } },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
