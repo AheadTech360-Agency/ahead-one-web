@@ -35,10 +35,10 @@ function NavLink({
       className={cn(
         "flex h-[30px] items-center gap-2.5 rounded-sm px-2 text-13",
         "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
-        active ? "bg-active font-medium text-fg" : "text-fg-muted hover:bg-hover hover:text-fg",
+        active ? "bg-active font-semibold text-accent-text" : "text-fg-muted hover:bg-hover hover:text-fg",
       )}
     >
-      <Icon className={cn("size-4 shrink-0", active ? "text-fg" : "text-fg-faint")} strokeWidth={1.75} aria-hidden />
+      <Icon className={cn("size-4 shrink-0", active ? "text-accent-text" : "text-fg-faint")} strokeWidth={1.75} aria-hidden />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined && count > 0 && (
         <span className="text-12 font-medium text-fg-muted tabular" aria-label={`${count} unread`}>

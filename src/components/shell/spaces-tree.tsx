@@ -305,7 +305,7 @@ function Row({
     <div
       className={cn(
         "group/row relative flex h-[30px] items-center gap-1.5 rounded-sm pr-1 text-13",
-        active ? "bg-active font-medium text-fg" : "text-fg-muted hover:bg-hover hover:text-fg",
+        active ? "bg-active font-semibold text-accent-text" : "text-fg-muted hover:bg-hover hover:text-fg",
       )}
       style={{ paddingLeft: 4 + depth * 14 }}
     >

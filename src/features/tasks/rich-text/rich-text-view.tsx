@@ -22,7 +22,7 @@ export const proseClass =
   "[&_ul[data-type=taskList]>li]:my-1 [&_ul[data-type=taskList]>li]:flex [&_ul[data-type=taskList]>li]:items-start [&_ul[data-type=taskList]>li]:gap-2 " +
   "[&_ul[data-type=taskList]>li>label]:mt-[3px] [&_ul[data-type=taskList]>li>label]:flex [&_ul[data-type=taskList]>li>label]:shrink-0 " +
   "[&_ul[data-type=taskList]>li>div]:min-w-0 [&_ul[data-type=taskList]>li>div]:flex-1 [&_ul[data-type=taskList]>li>div>p]:my-0 " +
-  "[&_input[type=checkbox]]:size-3.5 [&_input[type=checkbox]]:cursor-pointer [&_input[type=checkbox]]:accent-[var(--accent)] " +
+  "[&_input[type=checkbox]]:size-3.5 [&_input[type=checkbox]]:cursor-pointer [&_input[type=checkbox]]:accent-[var(--green)] " +
   "[&_li[data-checked=true]>div]:text-fg-muted [&_li[data-checked=true]>div]:line-through [&_li[data-checked=true]>div]:decoration-fg-faint " +
   "[&_blockquote]:my-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border-strong [&_blockquote]:pl-3 [&_blockquote]:text-fg-muted " +
   "[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-sm [&_pre]:bg-surface-sunken [&_pre]:p-3 [&_pre]:font-mono [&_pre]:text-12 [&_pre]:leading-5 " +
@@ -116,7 +116,7 @@ function renderNode(node: JsonValue, key: string): React.ReactNode {
               aria-hidden
               className={cn(
                 "flex size-3.5 items-center justify-center rounded-xs border",
-                checked ? "border-accent bg-accent text-fg-on-accent" : "border-border-strong",
+                checked ? "border-green bg-green text-navy-deep" : "border-border-strong",
               )}
             >
               {checked && <Check className="size-2.5" strokeWidth={3} />}

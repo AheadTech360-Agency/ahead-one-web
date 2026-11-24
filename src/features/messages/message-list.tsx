@@ -268,8 +268,8 @@ function DaySeparator({ date }: { date: Date }) {
 function NewDivider() {
   return (
     <div className="relative my-1 flex items-center px-4 sm:px-5" role="separator" aria-label="New messages">
-      <span className="h-px flex-1 bg-danger/60" aria-hidden />
-      <span className="ml-2 text-11 font-semibold text-danger-text">New</span>
+      <span className="h-px flex-1 bg-green" aria-hidden />
+      <span className="ml-2 text-11 font-semibold text-green-text">New</span>
     </div>
   );
 }

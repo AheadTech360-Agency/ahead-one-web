@@ -3,4 +3,4 @@
 /**
  * Upload with `PUT upload_url` (header `content-type: <mime>`, body = file), then call confirm.
  */
-export type UploadTicket = { attachment_id: string, upload_url: string, token: string, };
+export type UploadTicket = { attachment_id: string, upload_url: string, };

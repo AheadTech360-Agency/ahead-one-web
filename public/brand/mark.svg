@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="AheadTech360">
   <!-- Stand-in redraw of the AheadTech360 mark. Replace with the original artwork when available. -->
-  <path fill="#24408E" d="M40 176 L70 176 L111 24 L81 24 Z"/>
-  <path fill="#2DB46F" fill-rule="evenodd" d="M113 24 H143 L188 176 H157 L146 140 L118 176 H86 L130 118 L101 66 Z M128 70 L140 112 L134 120 L117 92 Z"/>
+  <path fill="#1d3c73" d="M40 176 L70 176 L111 24 L81 24 Z"/>
+  <path fill="#24b574" fill-rule="evenodd" d="M113 24 H143 L188 176 H157 L146 140 L118 176 H86 L130 118 L101 66 Z M128 70 L140 112 L134 120 L117 92 Z"/>
 </svg>

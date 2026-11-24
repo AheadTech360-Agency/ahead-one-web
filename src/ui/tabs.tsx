@@ -26,7 +26,7 @@ export function TabsTrigger({
         "relative -mb-px inline-flex h-9 shrink-0 items-center gap-1.5 border-b-2 border-transparent px-0.5 text-13 font-medium text-fg-muted",
         "transition-colors duration-[var(--dur-fast)] hover:text-fg",
         "focus-visible:rounded-xs focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
-        "data-[state=active]:border-fg data-[state=active]:text-fg",
+        "data-[state=active]:border-accent data-[state=active]:text-fg",
         className,
       )}
       {...props}

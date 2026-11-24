@@ -121,7 +121,7 @@ export function SetupMfa() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={enrollment.qr} alt="QR code for your authenticator app" width={176} height={176} />
                 ) : (
-                  <Skeleton className="size-44 bg-[#e8eaea]" />
+                  <Skeleton className="size-44 bg-[#e9eef7]" />
                 )}
               </div>
               <details className="mt-2 text-12 text-fg-muted">

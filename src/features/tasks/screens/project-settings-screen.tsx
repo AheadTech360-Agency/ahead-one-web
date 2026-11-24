@@ -47,7 +47,7 @@ import { PERMISSION_HINT, PERMISSION_LABEL, permAtLeast } from "../lib/access";
 import { ArchivedBanner } from "./project-screen";
 import { ScreenHeader } from "./screen-frame";
 
-export const SWATCHES = ["#0a7672", "#3a69b0", "#7c5cc4", "#b0457a", "#c4242a", "#c96a06", "#a68a0d", "#247b50", "#5c6166", "#151617"];
+export const SWATCHES = ["#3d68b0", "#1d8a57", "#2f7db4", "#b0457a", "#c62f36", "#c4650a", "#a68a0d", "#8a5a2b", "#5b5d66", "#14161a"];
 
 const CATEGORY: { value: StatusCategory; label: string; description: string }[] = [
   { value: "todo", label: "Not started", description: "Waiting to be picked up" },
@@ -451,7 +451,7 @@ function StatusEditor({ listId, editable }: { listId: string; editable: boolean 
   const create = useCreateStatus(listId);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<StatusCategory>("todo");
-  const [color, setColor] = useState(SWATCHES[1]);
+  const [color, setColor] = useState(SWATCHES[2]);
   const [deleting, setDeleting] = useState<ListStatus | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),

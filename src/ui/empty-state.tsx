@@ -39,7 +39,7 @@ export function EmptyState({
         <Icon className="size-[18px]" strokeWidth={1.75} aria-hidden />
       </span>
       <div className="flex max-w-sm flex-col gap-1">
-        <p className="text-14 font-semibold text-fg">{title}</p>
+        <p className="font-display text-16 font-semibold tracking-[-0.01em] text-fg">{title}</p>
         {description && <p className="text-13 text-fg-muted">{description}</p>}
       </div>
       {action && <div className="mt-1 flex items-center gap-2">{action}</div>}

@@ -83,7 +83,7 @@ function Row({ c, active, meId, people }: { c: Conversation; active: boolean; me
             <TypingOr c={c}>{preview ?? (c.kind === "channel" ? c.topic || "No messages yet" : "Say hello")}</TypingOr>
           </span>
           {unread && (
-            <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-fg px-1 text-[10px] font-semibold leading-none text-surface tabular" aria-hidden>
+            <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-green px-1 text-11 font-bold leading-none text-navy-deep tabular" aria-hidden>
               {c.unread_count > 99 ? "99+" : c.unread_count}
             </span>
           )}

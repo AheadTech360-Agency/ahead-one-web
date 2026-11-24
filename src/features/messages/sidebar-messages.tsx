@@ -34,7 +34,7 @@ function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: str
       className={cn(
         rowBase,
         active
-          ? "bg-active font-medium text-fg"
+          ? "bg-active font-semibold text-accent-text"
           : unread
             ? "font-semibold text-fg hover:bg-hover"
             : "text-fg-muted hover:bg-hover hover:text-fg",
@@ -48,7 +48,7 @@ function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: str
         <Hash className="size-3.5 shrink-0 text-fg-faint" aria-hidden />
       )}
       <span className="min-w-0 flex-1 truncate">{conversationName(c, meId)}</span>
-      {unread && <CountBadge count={c.unread_count} className="bg-fg text-surface" />}
+      {unread && <CountBadge count={c.unread_count} />}
     </Link>
   );
 }
@@ -124,7 +124,7 @@ export function SidebarMessages({ onNavigate }: { onNavigate?: () => void }) {
         href="/messages"
         onClick={onNavigate}
         aria-current={allActive ? "page" : undefined}
-        className={cn(rowBase, "gap-2.5", allActive ? "bg-active font-medium text-fg" : "text-fg-muted hover:bg-hover hover:text-fg")}
+        className={cn(rowBase, "gap-2.5", allActive ? "bg-active font-semibold text-accent-text" : "text-fg-muted hover:bg-hover hover:text-fg")}
       >
         <MessagesSquare className={cn("size-4 shrink-0", allActive ? "text-fg" : "text-fg-faint")} strokeWidth={1.75} aria-hidden />
         <span className="min-w-0 flex-1 truncate">All messages</span>

@@ -36,7 +36,7 @@ export function SettingsNav() {
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex h-8 shrink-0 items-center rounded-sm px-2 text-13 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
-                    active ? "bg-active font-medium text-fg" : "text-fg-muted hover:bg-hover hover:text-fg",
+                    active ? "bg-active font-semibold text-accent-text" : "text-fg-muted hover:bg-hover hover:text-fg",
                   )}
                 >
                   {i.label}

@@ -58,10 +58,10 @@ const PEOPLE: UserSummary[] = [
 
 const STATUSES = [
   { name: "To do", color: "#8a8f94", category: "todo" as const },
-  { name: "In progress", color: "#3a69b0", category: "active" as const },
+  { name: "In progress", color: "#2e5597", category: "active" as const },
   { name: "In review", color: "#c96a06", category: "active" as const },
-  { name: "Approved", color: "#0a7672", category: "done" as const },
-  { name: "Blocked", color: "#c4242a", category: "todo" as const },
+  { name: "Approved", color: "#1d8a57", category: "done" as const },
+  { name: "Blocked", color: "#c62f36", category: "todo" as const },
 ];
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {

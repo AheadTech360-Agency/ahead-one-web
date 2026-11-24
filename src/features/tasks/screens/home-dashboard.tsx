@@ -22,8 +22,10 @@ import { useTaskLink } from "../lib/use-task-filters";
 
 /*
  * Home, in the editorial-greeting style: the greeting is the h1 and states today's one fact,
- * then a 12-column grid whose rows share column lines (3/3/3/3, 9/3, 6/6). Figures are set at
- * regular weight on tonal panels; the one chart hue marks the main data element of each chart.
+ * set in the brand's navy band with a green marker; then a 12-column grid whose rows share
+ * column lines (3/3/3/3, 9/3, 6/6). Figures are in the display face on tonal panels. Each chart
+ * carries one brand hue on its main data element (navy for open work, green for completion)
+ * and the danger step for overdue.
  */
 
 const noop = () => () => {};
@@ -46,24 +48,31 @@ export function HomeDashboard() {
   const date = stamp ? format(new Date(`${stamp.slice(0, 10)}T12:00:00`), "EEEE, MMMM d") : "";
 
   return (
-    <div className="mx-auto w-full max-w-[1100px] px-4 pb-16 pt-6 sm:px-6 md:pt-12">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-24 font-normal tracking-[-0.015em] text-fg md:text-[30px] md:leading-[38px]">
+    <div className="mx-auto w-full max-w-[1100px] px-4 pb-16 pt-4 sm:px-6 md:pt-8">
+      <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 rounded-md bg-band px-5 py-6 text-band-fg sm:px-7 md:py-8">
+        <div className="min-w-0 max-w-[720px]">
+          <h1 className="text-balance text-24 font-semibold leading-8 tracking-[-0.02em] text-band-fg md:text-[30px] md:leading-[38px]">
             {firstName ? `${salutation}, ${firstName}.` : `${salutation}.`}{" "}
-            <span className="text-fg-muted">{q.data ? headline(q.data) : ""}</span>
+            <span className="font-normal text-band-muted">{q.data ? headline(q.data) : ""}</span>
           </h1>
-          <p className="mt-1.5 text-13 text-fg-muted">
-            {date}
-            {current ? `, ${current.workspace.name}` : ""}
+          <p className="mt-3 flex items-center gap-2 text-13 text-band-dim">
+            <span aria-hidden className="size-2 shrink-0 bg-green" />
+            <span className="truncate">
+              {date}
+              {current ? `, ${current.workspace.name}` : ""}
+            </span>
           </p>
         </div>
-        <Button variant="primary" onClick={() => setCreateTaskOpen(true)}>
+        <Button
+          variant="primary"
+          onClick={() => setCreateTaskOpen(true)}
+          className="border-band-fg bg-band-fg text-navy-deep not-disabled:active:border-band-strong not-disabled:active:bg-band-strong"
+        >
           <Plus aria-hidden /> New task
         </Button>
       </header>
 
-      <div className="mt-10">
+      <div className="mt-6 md:mt-8">
         {q.isPending ? (
           <DashboardSkeleton />
         ) : q.isError ? (
@@ -107,14 +116,14 @@ function headline(d: Dashboard): string {
 
 /* ---------- Grid pieces ---------- */
 
-const GRID = "grid grid-cols-2 gap-4 md:grid-cols-12";
+const GRID = "grid grid-cols-2 gap-4 lg:grid-cols-12";
 
 function Tile({ label, value, caption, tone, className }: { label: string; value: number; caption: string; tone?: "danger"; className?: string }) {
   return (
-    <div className={cn("flex min-h-[112px] flex-col justify-between rounded-lg bg-surface-sunken p-4 md:col-span-3", className)}>
+    <div className={cn("flex min-h-[112px] flex-col justify-between rounded-md bg-surface-sunken p-4 lg:col-span-3", className)}>
       <p className="text-13 text-fg-muted">{label}</p>
       <div>
-        <p className={cn("text-[28px] font-normal leading-9 tracking-[-0.02em] tabular", tone === "danger" && value > 0 ? "text-danger-text" : value === 0 ? "text-fg-faint" : "text-fg")}>
+        <p className={cn("figure text-[30px] font-medium leading-9 tracking-[-0.02em]", tone === "danger" && value > 0 ? "text-danger-text" : value === 0 ? "text-fg-faint" : "text-fg")}>
           {value.toLocaleString()}
         </p>
         <p className="truncate text-12 text-fg-muted">{caption}</p>
@@ -141,13 +150,19 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("col-span-2 flex min-w-0 flex-col rounded-lg bg-surface-sunken p-5", className)}>
+    <section className={cn("col-span-2 flex min-w-0 flex-col rounded-md bg-surface-sunken p-5", className)}>
       <div className="mb-3 flex items-center gap-2">
-        <h2 className="text-14 font-semibold text-fg">{title}</h2>
+        <h2 className="text-16 font-semibold text-fg">{title}</h2>
         {count !== undefined && <span className="rounded-full bg-active px-1.5 text-11 font-medium text-fg-muted tabular">{count}</span>}
         {legend && <div className="ml-auto">{legend}</div>}
         {href && (
-          <Link href={href} className={cn("text-12 text-fg-muted hover:text-fg hover:underline", !legend && "ml-auto")}>
+          <Link
+            href={href}
+            className={cn(
+              "text-12 font-semibold text-fg underline decoration-fg decoration-2 underline-offset-4 transition-[text-decoration-color] hover:decoration-green",
+              !legend && "ml-auto",
+            )}
+          >
             {linkLabel}
           </Link>
         )}
@@ -201,24 +216,24 @@ function Personal({ d, people }: { d: Extract<Dashboard, { kind: "personal" }>; 
       <Tile label="Next 7 days" value={d.upcoming.length} caption="From tomorrow" />
       <Tile label="Mentions" value={d.mentions.length} caption="Recent" />
 
-      <Panel title="Due horizon" className="md:col-span-9" legend={<HorizonLegend />}>
+      <Panel title="Due horizon" className="lg:col-span-9" legend={<HorizonLegend />}>
         <Horizon today={d.today} upcoming={d.upcoming} overdue={d.overdue} />
       </Panel>
-      <Panel title="Mentions" className="md:col-span-3">
+      <Panel title="Mentions" className="lg:col-span-3">
         <Mentions items={d.mentions} />
       </Panel>
 
-      <Panel title="Today" count={d.today.length} href="/my-tasks" className="md:col-span-6">
+      <Panel title="Today" count={d.today.length} href="/my-tasks" className="lg:col-span-6">
         <TaskCards items={d.today} icon={CalendarDays} empty="Nothing due today" />
       </Panel>
-      <Panel title="Overdue" count={d.overdue.length} href="/my-tasks?tab=overdue" className="md:col-span-6">
+      <Panel title="Overdue" count={d.overdue.length} href="/my-tasks?tab=overdue" className="lg:col-span-6">
         <TaskCards items={d.overdue} icon={CircleAlert} empty="Nothing overdue" />
       </Panel>
 
-      <Panel title="Upcoming" count={d.upcoming.length} href="/my-tasks?tab=upcoming" className="md:col-span-6">
+      <Panel title="Upcoming" count={d.upcoming.length} href="/my-tasks?tab=upcoming" className="lg:col-span-6">
         <TaskCards items={d.upcoming} icon={CalendarClock} empty="The next 7 days are clear" />
       </Panel>
-      <Panel title="Recent activity" className="md:col-span-6">
+      <Panel title="Recent activity" className="lg:col-span-6">
         <Feed items={d.activity} people={people} max={6} />
       </Panel>
     </div>
@@ -229,10 +244,10 @@ function HorizonLegend() {
   return (
     <span className="flex items-center gap-3 text-12 text-fg-muted" aria-hidden>
       <span className="inline-flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-[var(--chart-1)]" /> Due
+        <span className="size-2.5 rounded-[3px] bg-chart-1" /> Due
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-danger" /> Overdue
+        <span className="size-2.5 rounded-[3px] bg-chart-3" /> Overdue
       </span>
     </span>
   );
@@ -269,14 +284,14 @@ function Horizon({ today, upcoming, overdue }: { today: MyTask[]; upcoming: MyTa
               aria-label={`${t.task.title}${late ? ", overdue" : ""}`}
               className={cn(
                 "h-3 w-full max-w-11 rounded-[4px] transition-transform duration-[var(--dur-fast)] ease-out motion-safe:hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
-                late ? "bg-danger" : "bg-[var(--chart-1)]",
+                late ? "bg-chart-3" : "bg-chart-1",
                 i === cap - 1 && items.length > cap && "opacity-50",
               )}
             />
           </Tooltip>
         ))}
       </div>
-      <span className={cn("mt-2 border-t pt-1.5 text-12 w-full text-center", isToday ? "border-fg font-semibold text-fg" : "border-border text-fg-muted")}>{label}</span>
+      <span className={cn("mt-2 border-t pt-1.5 text-12 w-full text-center", isToday ? "border-t-2 border-green font-semibold text-fg" : "border-border text-fg-muted")}>{label}</span>
       <span className="text-11 text-fg-faint tabular">{sub}</span>
     </li>
   );
@@ -303,17 +318,17 @@ function Management({ d, people }: { d: Extract<Dashboard, { kind: "management" 
       <Tile label="Due in 7 days" value={week} caption="Assigned work" />
       <Tile label="People" value={d.workload.length} caption="With open work" />
 
-      <Panel title="Workload" className="md:col-span-6" legend={<WorkloadLegend />}>
+      <Panel title="Workload" className="lg:col-span-6" legend={<WorkloadLegend />}>
         <Workload rows={d.workload} />
       </Panel>
-      <Panel title="Overdue" count={d.overdue.length} className="md:col-span-6">
+      <Panel title="Overdue" count={d.overdue.length} className="lg:col-span-6">
         <TaskCards items={d.overdue} icon={CircleAlert} empty="Nothing overdue across the team" />
       </Panel>
 
-      <Panel title="Due this week" count={d.upcoming.length} className="md:col-span-6">
+      <Panel title="Due this week" count={d.upcoming.length} className="lg:col-span-6">
         <TaskCards items={d.upcoming} icon={CalendarClock} empty="Nothing due in the next 7 days" />
       </Panel>
-      <Panel title="Recent activity" className="md:col-span-6">
+      <Panel title="Recent activity" className="lg:col-span-6">
         <Feed items={d.activity} people={people} max={6} />
       </Panel>
     </div>
@@ -324,10 +339,10 @@ function WorkloadLegend() {
   return (
     <span className="flex items-center gap-3 text-12 text-fg-muted" aria-hidden>
       <span className="inline-flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-[var(--chart-1)]" /> On time
+        <span className="size-2.5 rounded-[3px] bg-chart-1" /> On time
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="size-2.5 rounded-[3px] bg-danger" /> Overdue
+        <span className="size-2.5 rounded-[3px] bg-chart-3" /> Overdue
       </span>
     </span>
   );
@@ -358,12 +373,12 @@ function Workload({ rows }: { rows: WorkloadRow[] }) {
                 <span className="flex h-2 items-center gap-[2px]" aria-hidden>
                   {onTime > 0 && (
                     <span
-                      className={cn("h-full bg-[var(--chart-1)]", r.overdue ? "rounded-l-[4px]" : "rounded-r-[4px] rounded-l-[2px]")}
+                      className={cn("h-full bg-chart-1", r.overdue ? "rounded-l-[4px]" : "rounded-r-[4px] rounded-l-[2px]")}
                       style={{ width: `${(onTime / max) * 100}%` }}
                     />
                   )}
                   {r.overdue > 0 && (
-                    <span className="h-full rounded-r-[4px] bg-danger" style={{ width: `${(r.overdue / max) * 100}%` }} />
+                    <span className="h-full rounded-r-[4px] bg-chart-3" style={{ width: `${(r.overdue / max) * 100}%` }} />
                   )}
                 </span>
                 <span className="text-right text-12 text-fg-muted tabular">
@@ -389,10 +404,10 @@ function Org({ d, people }: { d: Extract<Dashboard, { kind: "org" }>; people: Us
       <Tile label="Overdue" value={d.overdue_tasks} caption={d.overdue_tasks ? "Past their due date" : "Nothing late"} tone="danger" />
       <Tile label="Done this week" value={d.completed_this_week} caption="Last 7 days" />
 
-      <Panel title="Projects" count={d.projects.length} className="md:col-span-9">
+      <Panel title="Projects" count={d.projects.length} className="lg:col-span-9">
         <ProjectTable rows={d.projects} />
       </Panel>
-      <Panel title="Recent activity" className="md:col-span-3">
+      <Panel title="Recent activity" className="lg:col-span-3">
         <Feed items={d.activity} people={people} max={4} />
       </Panel>
     </div>
@@ -431,7 +446,7 @@ function ProjectTable({ rows }: { rows: ProjectStat[] }) {
                 <td className="px-1 pl-4">
                   <span className="flex items-center gap-2">
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-active" aria-hidden>
-                      <span className="block h-full rounded-full bg-[var(--chart-1)]" style={{ width: `${pct}%` }} />
+                      <span className="block h-full rounded-full bg-chart-2" style={{ width: `${pct}%` }} />
                     </span>
                     <span className="w-9 text-right text-12 text-fg-muted tabular">{pct}%</span>
                   </span>
@@ -451,15 +466,15 @@ export function DashboardSkeleton() {
   return (
     <div role="status" aria-label="Loading dashboard" className={GRID}>
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="flex min-h-[112px] flex-col justify-between rounded-lg bg-surface-sunken p-4 md:col-span-3">
+        <div key={i} className="flex min-h-[112px] flex-col justify-between rounded-md bg-surface-sunken p-4 lg:col-span-3">
           <Skeleton className="h-3 w-20" />
           <Skeleton className="h-7 w-12" />
         </div>
       ))}
-      <div className="col-span-2 h-56 rounded-lg bg-surface-sunken p-5 md:col-span-9">
+      <div className="col-span-2 h-56 rounded-md bg-surface-sunken p-5 lg:col-span-9">
         <Skeleton className="h-3.5 w-28" />
       </div>
-      <div className="col-span-2 h-56 rounded-lg bg-surface-sunken p-5 md:col-span-3">
+      <div className="col-span-2 h-56 rounded-md bg-surface-sunken p-5 lg:col-span-3">
         <Skeleton className="h-3.5 w-20" />
       </div>
     </div>

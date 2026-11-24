@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/menu";
+import { BrandMark } from "@/ui/brand-mark";
 import { Skeleton } from "@/ui/skeleton";
 
 function Mark({ name, className }: { name: string; className?: string }) {
@@ -19,7 +20,7 @@ function Mark({ name, className }: { name: string; className?: string }) {
     <span
       aria-hidden
       className={cn(
-        "inline-flex size-6 shrink-0 items-center justify-center rounded-sm bg-accent text-[11px] font-bold tracking-tight text-fg-on-accent",
+        "inline-flex size-6 shrink-0 items-center justify-center rounded-xs bg-accent text-[11px] font-bold tracking-tight text-fg-on-accent",
         className,
       )}
     >
@@ -50,9 +51,9 @@ export function WorkspaceSwitcher() {
         )}
         aria-label={`Workspace: ${name}. Switch workspace`}
       >
-        <Mark name={name} />
+        <BrandMark className="size-[22px]" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-13 font-semibold text-fg">{name}</span>
+          <span className="block truncate font-display text-14 font-semibold tracking-[-0.01em] text-fg">{name}</span>
         </span>
         <ChevronsUpDown className="size-3.5 shrink-0 text-fg-faint" aria-hidden />
       </DropdownMenuTrigger>

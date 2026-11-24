@@ -1,82 +1,115 @@
 /*
- * AheadOne design tokens.
+ * AheadOne design tokens, in the AheadTech360 brand.
  *
- * One neutral greyscale, one accent (spruce teal), status hues for data only.
+ * Brand source (aheadtech360.com): navy #1d3c73 / navy-deep #142b54, green #24b574 /
+ * green-ink #1d7a4d / green-light #e9fbf2, ink #14161a, muted #5b5d66, line #e2e4ea,
+ * bg-soft #f5f7fa, and the on-navy tones #ffffff / #dde4f0 / #aec0e0 / #9fadc7 / #4a628f.
+ *
+ * Roles: navy is the action colour (primary buttons, focus, selection, links, active tabs,
+ * checked controls). Green is the positive colour (done, success, progress, unread markers,
+ * the primary button's offset shadow, small brand markers). Status hues are for data only.
  * Light values live on :root, dark values on [data-theme="dark"] (set on <html> by next-themes,
  * which resolves "system" from prefers-color-scheme before first paint). Both selectors also
  * work on any element, so a subtree can be forced into either theme (see /dev/components).
- * Every text tier is checked to 4.5:1 on the surface it sits on.
+ * Every text tier is checked to 4.5:1 on the surface it sits on, UI marks to 3:1.
  */
 
 :root,
 [data-theme="light"] {
   color-scheme: light;
 
+  /* Brand constants (identical in both themes unless redefined below) */
+  --navy: #1d3c73;
+  --navy-deep: #142b54;
+
   /* Grounds and surfaces */
-  --bg: #f4f5f5; /* app frame: sidebar + top bar */
+  --bg: #f5f7fa; /* app frame: sidebar + top bar (brand bg-soft) */
   --surface: #ffffff; /* the working sheet */
   --surface-raised: #ffffff; /* menus, popovers, dialogs */
-  --surface-sunken: #f7f8f8; /* wells, table hover, code */
-  --hover: rgb(20 22 24 / 0.045);
-  --active: #e8eaea; /* selected nav row, pressed */
-  --overlay: rgb(14 15 16 / 0.36);
+  --surface-sunken: #f5f7fa; /* wells, tiles, table hover, code */
+  --hover: rgb(29 60 115 / 0.05);
+  --active: #e9eef7; /* selected nav row, pressed: a navy tint */
+  --overlay: rgb(10 21 41 / 0.42);
 
   /* Lines */
-  --border: #e5e7e8;
-  --border-subtle: #eff0f1; /* row rules */
-  --border-strong: #d2d5d7; /* control outlines */
+  --border: #e2e4ea; /* brand line */
+  --border-subtle: #eceef3; /* row rules */
+  --border-strong: #c9cdd8; /* control outlines */
 
   /* Text */
-  --fg: #151617;
-  --fg-muted: #5c6166;
-  --fg-faint: #6c7176; /* placeholders, meta. 4.8:1 on white */
+  --fg: #14161a; /* brand ink */
+  --fg-muted: #5b5d66; /* brand muted */
+  --fg-faint: #656873; /* placeholders, meta. 5.6:1 on white, 5.2:1 on bg-soft */
   --fg-on-accent: #ffffff;
 
-  /* Accent: spruce teal */
-  --accent: #0a7672;
-  --accent-hover: #075f5c;
-  --accent-subtle: #e2f2f0;
-  --accent-text: #075f5c;
+  /* Accent: brand navy, the action colour */
+  --accent: #1d3c73;
+  --accent-hover: #142b54;
+  --accent-subtle: #e9eef7;
+  --accent-text: #1d3c73;
+
+  /* Brand green: the positive colour */
+  --green: #24b574; /* fills, markers, the offset shadow. Not for text on light. */
+  --green-text: #1d7a4d; /* green words on light grounds (5.3:1 on white) */
+  --green-subtle: #e9fbf2;
 
   /* Focus */
-  --ring: #0a7672;
+  --ring: #1d3c73;
   --ring-offset: #ffffff;
 
-  /* Status (data only) */
-  --danger: #c4242a;
-  --danger-hover: #a51d22;
+  /* Status (data only). Success is the brand green family. */
+  --danger: #c62f36;
+  --danger-hover: #a8242b;
   --fg-on-danger: #ffffff;
-  --danger-subtle: #ffecea;
-  --danger-text: #9b1c20;
-  --warning: #b45309;
-  --warning-subtle: #fff4dc;
+  --danger-subtle: #fdeced;
+  --danger-text: #9b1f26;
+  --warning: #b25407;
+  --warning-subtle: #fff3dd;
   --warning-text: #8a3f06;
-  --success: #247b50;
-  --success-subtle: #def5e7;
-  --success-text: #145232;
-  --info: #3a69b0;
-  --info-subtle: #e6eefa;
-  --info-text: #234a85;
+  --success: #1d8a57;
+  --success-subtle: #e9fbf2;
+  --success-text: #165f3c;
+  --info: #2e5597;
+  --info-subtle: #e9eef7;
+  --info-text: #1d3c73;
 
   /* Priority */
-  --priority-urgent: #d02b2b;
-  --priority-high: #c96a06;
-  --priority-normal: #3a69b0;
-  --priority-low: #848a90;
+  --priority-urgent: #c62f36;
+  --priority-high: #c4650a;
+  --priority-normal: #2e5597;
+  --priority-low: #7d818c;
 
-  /* Charts: the one data hue (validated with danger as the second series) */
-  --chart-1: #0b8f87;
+  /* Charts. One hue per chart: navy (lifted into the chart lightness band) for open work,
+     green for completion, danger for overdue. Validated with the dataviz palette checker in
+     the adjacency order green, navy, danger (green and danger never share a chart). */
+  --chart-1: #2e5597;
+  --chart-2: #1f9a63;
+  --chart-3: #c62f36; /* overdue series */
 
-  /* Elevation: only what floats gets a shadow */
-  --shadow-xs: 0 1px 2px rgb(16 18 20 / 0.05);
-  --shadow-popover: 0 1px 3px rgb(16 18 20 / 0.06), 0 6px 20px rgb(16 18 20 / 0.08);
-  --shadow-dialog: 0 2px 6px rgb(16 18 20 / 0.06), 0 20px 56px rgb(16 18 20 / 0.16);
+  /* The navy band (Home greeting, auth panel): brand on-navy tones */
+  --band: #1d3c73;
+  --band-fg: #ffffff;
+  --band-strong: #dde4f0;
+  --band-muted: #aec0e0;
+  --band-dim: #9fadc7;
+  --band-line: #4a628f;
 
-  /* Radius (tight system, nested radii step down) */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  /* The brand mark's two fills */
+  --mark-navy: #1d3c73;
+  --mark-green: #24b574;
+
+  /* Elevation: only what floats gets a shadow. The brand lift is a hard offset, no blur. */
+  --shadow-xs: 0 1px 2px rgb(20 22 26 / 0.05);
+  --shadow-popover: 0 1px 3px rgb(20 43 84 / 0.07), 0 6px 20px rgb(20 43 84 / 0.09);
+  --shadow-dialog: 0 2px 6px rgb(20 43 84 / 0.07), 0 20px 56px rgb(20 43 84 / 0.18);
+  --shadow-lift: 4px 4px 0 0 var(--green);
+  --shadow-press: 1px 1px 0 0 var(--green);
+
+  /* Radius: near-square, after the brand's square buttons. Nested radii step down. */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
   --radius-full: 9999px;
 
   /* Layout */
@@ -106,60 +139,83 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/*
+ * Dark: navy-deep grounds instead of neutral grey, a lifted navy for interactive fills so labels
+ * and outlines hold contrast, the brand's on-navy tones for text, and green kept vivid.
+ */
 :root[data-theme="dark"],
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #0e0e0f;
-  --surface: #151516;
-  --surface-raised: #1b1b1d;
-  --surface-sunken: #1a1a1c;
-  --hover: rgb(255 255 255 / 0.05);
-  --active: #252527;
-  --overlay: rgb(0 0 0 / 0.56);
+  --bg: #0b1730;
+  --surface: #10203d;
+  --surface-raised: #152a4e;
+  --surface-sunken: #0d1b35;
+  --hover: rgb(174 192 224 / 0.07);
+  --active: #1c3560;
+  --overlay: rgb(3 8 18 / 0.62);
 
-  --border: #28282b;
-  --border-subtle: #202022;
-  --border-strong: #3a3a3e;
+  --border: #213a64;
+  --border-subtle: #1a3054;
+  --border-strong: #3a5687;
 
-  --fg: #ededee;
-  --fg-muted: #a7a8ac;
-  --fg-faint: #8e8f94;
-  --fg-on-accent: #04201e;
+  --fg: #ffffff;
+  --fg-muted: #b9c8e3; /* between brand on-navy strong and muted */
+  --fg-faint: #9fadc7; /* brand on-navy dim */
+  --fg-on-accent: #ffffff;
 
-  --accent: #2fb2ab;
-  --accent-hover: #4cc5be;
-  --accent-subtle: #0f2b29;
-  --accent-text: #5fcdc6;
+  --accent: #4472c0; /* lifted navy: white label 4.8:1, 3.4:1 against the surface */
+  --accent-hover: #3d68b8;
+  --accent-subtle: #1c3560;
+  --accent-text: #a9c3f2;
 
-  --ring: #3fc1ba;
-  --ring-offset: #151516;
+  --green: #2fc884;
+  --green-text: #5fd9a0;
+  --green-subtle: #113a31;
 
-  --danger: #e5566f;
-  --danger-hover: #ec7186;
-  --fg-on-danger: #1f0a0e;
-  --danger-subtle: #2c1a1e;
-  --danger-text: #f2909f;
-  --warning: #e09a3c;
-  --warning-subtle: #2b2113;
-  --warning-text: #f0b86a;
-  --success: #3fbf7a;
-  --success-subtle: #15291d;
-  --success-text: #6fd39b;
-  --info: #6c9be0;
-  --info-subtle: #17223a;
-  --info-text: #9dbdf0;
+  --ring: #8fb0ea;
+  --ring-offset: #10203d;
 
-  --priority-urgent: #f0606a;
+  --danger: #f0646f;
+  --danger-hover: #f47f88;
+  --fg-on-danger: #2a080c;
+  --danger-subtle: #3a1a27;
+  --danger-text: #ff9ea6;
+  --warning: #e6a144;
+  --warning-subtle: #33280f;
+  --warning-text: #f2bd6e;
+  --success: #2fc884;
+  --success-subtle: #113a31;
+  --success-text: #6fdcaa;
+  --info: #8fb0ea;
+  --info-subtle: #1c3560;
+  --info-text: #a9c3f2;
+
+  --priority-urgent: #f0646f;
   --priority-high: #ec9a3e;
-  --priority-normal: #6c9be0;
-  --priority-low: #8e8f94;
+  --priority-normal: #8fb0ea;
+  --priority-low: #8d9bb6;
 
-  --chart-1: #1f9d96;
+  /* Dark chart steps, each inside the dark lightness band (validated on #0d1b35) */
+  --chart-1: #5b86d6;
+  --chart-2: #24ad6e;
+  --chart-3: #dc4f5b;
+
+  /* The band keeps the brand navy in dark, so it still reads as a field above the navy-deep sheet */
+  --band: #1d3c73;
+  --band-fg: #ffffff;
+  --band-strong: #dde4f0;
+  --band-muted: #aec0e0;
+  --band-dim: #9fadc7;
+  --band-line: #4a628f;
+
+  /* The mark's navy is lifted so it reads on navy-deep grounds */
+  --mark-navy: #7ea2e4;
+  --mark-green: #2fc884;
 
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.04), 0 8px 24px rgb(0 0 0 / 0.5);
-  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.04), 0 24px 64px rgb(0 0 0 / 0.6);
+  --shadow-popover: 0 0 0 1px rgb(174 192 224 / 0.06), 0 8px 24px rgb(2 6 15 / 0.55);
+  --shadow-dialog: 0 0 0 1px rgb(174 192 224 / 0.06), 0 24px 64px rgb(2 6 15 / 0.65);
 }
 
 @media (prefers-reduced-motion: reduce) {

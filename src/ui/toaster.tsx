@@ -28,7 +28,7 @@ export function Toaster() {
           warning: "[&_[data-icon]]:text-warning",
           info: "[&_[data-icon]]:text-info",
           actionButton:
-            "ml-auto h-7 shrink-0 rounded-sm bg-accent px-2.5 text-12 font-medium text-fg-on-accent hover:bg-accent-hover",
+            "ml-auto h-7 shrink-0 rounded-none bg-accent px-2.5 text-12 font-semibold text-fg-on-accent hover:bg-accent-hover",
           cancelButton: "ml-auto h-7 shrink-0 rounded-sm px-2.5 text-12 text-fg-muted hover:bg-hover",
           closeButton:
             "!absolute !right-1.5 !top-1.5 !left-auto !size-6 !transform-none rounded-sm !border-0 !bg-transparent text-fg-faint hover:!bg-hover hover:text-fg",

@@ -81,7 +81,7 @@ export function Subtasks({
       {subs.length > 0 && (
         <div className="mb-1 flex items-center gap-2" aria-hidden>
           <div className="h-1 flex-1 overflow-hidden rounded-full bg-active">
-            <div className="h-full rounded-full bg-accent transition-[width] duration-[var(--dur-base)]" style={{ width: `${(done / subs.length) * 100}%` }} />
+            <div className="h-full rounded-full bg-chart-2 transition-[width] duration-[var(--dur-base)]" style={{ width: `${(done / subs.length) * 100}%` }} />
           </div>
           <span className="text-12 text-fg-muted tabular">
             {done} of {subs.length}

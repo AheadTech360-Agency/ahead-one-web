@@ -99,7 +99,7 @@ export function NotificationRow({
       </button>
       {unread && (
         <>
-          <span aria-hidden className="pointer-events-none absolute right-3.5 top-4 size-2 rounded-full bg-accent group-hover/n:opacity-0 group-focus-within/n:opacity-0" />
+          <span aria-hidden className="pointer-events-none absolute right-3.5 top-4 size-2 rounded-full bg-green group-hover/n:opacity-0 group-focus-within/n:opacity-0" />
           <IconButton
             label="Mark as read"
             size="sm"

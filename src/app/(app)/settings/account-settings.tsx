@@ -223,16 +223,16 @@ function AppearanceTab() {
 /** Miniature of the shell in each theme, drawn from fixed values so it previews the other theme too. */
 function ThemePreview({ kind }: { kind: string }) {
   const half = (dark: boolean) => (
-    <div className={cn("flex h-full flex-1 gap-1.5 p-2", dark ? "bg-[#0e0e0f]" : "bg-[#f4f5f5]")}>
+    <div className={cn("flex h-full flex-1 gap-1.5 p-2", dark ? "bg-[#0b1730]" : "bg-[#f5f7fa]")}>
       <div className="flex w-1/4 flex-col gap-1 pt-1">
         {[0, 1, 2].map((i) => (
-          <span key={i} className={cn("h-1 rounded-full", dark ? "bg-[#3a3a3e]" : "bg-[#d2d5d7]")} />
+          <span key={i} className={cn("h-1 rounded-full", dark ? "bg-[#3a5687]" : "bg-[#c9cdd8]")} />
         ))}
       </div>
-      <div className={cn("flex flex-1 flex-col gap-1 rounded-[3px] border p-1.5", dark ? "border-[#28282b] bg-[#151516]" : "border-[#e5e7e8] bg-white")}>
-        <span className={cn("h-1 w-1/2 rounded-full", dark ? "bg-[#ededee]" : "bg-[#151617]")} />
-        <span className={cn("h-1 w-3/4 rounded-full", dark ? "bg-[#3a3a3e]" : "bg-[#e5e7e8]")} />
-        <span className="mt-auto h-1.5 w-1/3 rounded-full bg-[#0a7672]" />
+      <div className={cn("flex flex-1 flex-col gap-1 rounded-[3px] border p-1.5", dark ? "border-[#213a64] bg-[#10203d]" : "border-[#e2e4ea] bg-white")}>
+        <span className={cn("h-1 w-1/2 rounded-full", dark ? "bg-[#ffffff]" : "bg-[#14161a]")} />
+        <span className={cn("h-1 w-3/4 rounded-full", dark ? "bg-[#3a5687]" : "bg-[#e2e4ea]")} />
+        <span className={cn("mt-auto h-1.5 w-1/3 shadow-[2px_2px_0_0_#24b574]", dark ? "bg-[#4472c0]" : "bg-[#1d3c73]")} />
       </div>
     </div>
   );
