@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
 
-/** Flat placeholder at the real size of what it stands in for. No shimmer. */
-export function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+/** Flat placeholder at the real size of what it stands in for. `shimmer` sweeps a highlight (transform only). */
+export function Skeleton({ className, shimmer, ...props }: React.ComponentProps<"div"> & { shimmer?: boolean }) {
   return (
     <div
       aria-hidden
-      className={cn("rounded-xs bg-active motion-safe:animate-pulse", className)}
+      className={cn("rounded-xs bg-active", shimmer ? "sb-shimmer" : "motion-safe:animate-pulse", className)}
       {...props}
     />
   );

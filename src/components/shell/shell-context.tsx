@@ -5,11 +5,20 @@ import { useTheme } from "next-themes";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useStoredState } from "@/lib/hooks/use-stored-state";
 
+export const SIDEBAR_MIN = 220;
+export const SIDEBAR_MAX = 360;
+export const SIDEBAR_DEFAULT = 248;
+export const clampSidebar = (w: number) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, Math.round(w)));
+
 export type PaletteMode = "commands" | "search";
 
 type ShellState = {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  /** Expanded sidebar width in px, clamped to 220..360. */
+  sidebarWidth: number;
+  setSidebarWidth: (w: number) => void;
+  resetSidebarWidth: () => void;
   mobileNavOpen: boolean;
   setMobileNavOpen: (open: boolean) => void;
   palette: { open: boolean; mode: PaletteMode };
@@ -53,6 +62,8 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useStoredState("ahead-one.sidebar-collapsed", false);
+  const [storedWidth, setStoredWidth] = useStoredState<number>("ahead-one.sidebar-width", SIDEBAR_DEFAULT);
+  const sidebarWidth = clampSidebar(Number.isFinite(storedWidth) ? storedWidth : SIDEBAR_DEFAULT);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [palette, setPalette] = useState<{ open: boolean; mode: PaletteMode }>({
     open: false,
@@ -123,6 +134,9 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
     () => ({
       sidebarCollapsed,
       toggleSidebar: () => setSidebarCollapsed((c) => !c),
+      sidebarWidth,
+      setSidebarWidth: (w) => setStoredWidth(clampSidebar(w)),
+      resetSidebarWidth: () => setStoredWidth(SIDEBAR_DEFAULT),
       mobileNavOpen,
       setMobileNavOpen,
       palette,
@@ -133,7 +147,7 @@ export function ShellProvider({ children }: { children: React.ReactNode }) {
       createTaskOpen,
       setCreateTaskOpen,
     }),
-    [sidebarCollapsed, setSidebarCollapsed, mobileNavOpen, palette, shortcutsOpen, createTaskOpen],
+    [sidebarCollapsed, setSidebarCollapsed, sidebarWidth, setStoredWidth, mobileNavOpen, palette, shortcutsOpen, createTaskOpen],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

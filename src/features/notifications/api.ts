@@ -1,5 +1,6 @@
 "use client";
 
+import { safeNext } from "@/lib/safe-next";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api/client";
@@ -37,7 +38,7 @@ export function useMarkAllRead() {
 
 /** Only follow app-relative links from notifications. */
 export function safeLink(link: string) {
-  return link.startsWith("/") && !link.startsWith("//") && !link.startsWith("/\\") ? link : "/inbox";
+  return safeNext(link, "/inbox");
 }
 
 export function useOpenNotification(after?: () => void) {

@@ -5,6 +5,7 @@ import { useId } from "react";
 import { useStoredState } from "@/lib/hooks/use-stored-state";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@/ui/icon-button";
+import { Collapse } from "./sidebar-motion";
 
 /** A collapsible group in the sidebar with a sentence-case heading and an optional add action. */
 export function SidebarSection({
@@ -40,7 +41,7 @@ export function SidebarSection({
             <ChevronRight
               aria-hidden
               className={cn(
-                "size-3 text-fg-faint opacity-0 transition-[transform,opacity] duration-[var(--dur-fast)] group-hover/sec:opacity-100",
+                "size-3 text-fg-faint opacity-0 transition-[transform,opacity] duration-[var(--dur-base)] ease-[var(--ease-out-expo)] group-hover/sec:opacity-100",
                 !collapsed && "rotate-90",
                 collapsed && "opacity-100",
               )}
@@ -53,19 +54,19 @@ export function SidebarSection({
             size="sm"
             tooltipSide="right"
             onClick={action.onClick}
-            className="size-6 opacity-0 group-hover/sec:opacity-100 focus-visible:opacity-100"
+            className="size-6 opacity-0 transition-opacity duration-[var(--dur-fast)] group-hover/sec:opacity-100 focus-visible:opacity-100"
           >
             <Plus aria-hidden />
           </IconButton>
         )}
         {actions && (
-          <div className="flex items-center opacity-0 group-hover/sec:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+          <div className="flex items-center opacity-0 transition-opacity duration-[var(--dur-fast)] group-hover/sec:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
             {actions}
           </div>
         )}
       </div>
-      <div id={`${id}-c`} hidden={collapsed}>
-        {children}
+      <div id={`${id}-c`}>
+        <Collapse open={!collapsed}>{children}</Collapse>
       </div>
     </section>
   );

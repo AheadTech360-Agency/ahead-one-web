@@ -104,7 +104,12 @@
   --animate-in-fade: in-fade var(--dur-base) var(--ease-out);
   --animate-in-pop: in-pop var(--dur-fast) var(--ease-out);
   --animate-in-sheet: in-sheet var(--dur-slow) var(--ease-out);
-  --animate-in-drawer: in-drawer var(--dur-slow) var(--ease-out);
+  --animate-in-drawer: in-drawer var(--dur-layout) var(--ease-out-expo);
+  --animate-out-drawer: out-drawer var(--dur-base) var(--ease-in) forwards;
+  --animate-out-fade: out-fade var(--dur-fast) var(--ease-in) forwards;
+  --animate-out-pop: out-pop var(--dur-fast) var(--ease-in) forwards;
+  --animate-out-sheet: out-sheet var(--dur-base) var(--ease-in) forwards;
+  --animate-badge: badge-bump var(--dur-base) var(--ease-out-expo);
 
   @keyframes in-fade {
     from {
@@ -114,7 +119,46 @@
   @keyframes in-pop {
     from {
       opacity: 0;
-      transform: translateY(-2px) scale(0.98);
+      transform: translate(var(--pop-x, 0px), var(--pop-y, -2px)) scale(0.97);
+    }
+  }
+  @keyframes out-pop {
+    to {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+  @keyframes out-fade {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes out-sheet {
+    to {
+      transform: translateX(16px);
+      opacity: 0;
+    }
+  }
+  @keyframes out-drawer {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes badge-bump {
+    from {
+      opacity: 0.4;
+      transform: scale(0.8);
+    }
+  }
+  @keyframes shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes sb-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
     }
   }
   @keyframes in-sheet {
@@ -207,6 +251,234 @@
   .focus-ring:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+}
+
+/* ---------- Sidebar motion ----------
+ * Only transform, opacity and grid tracks animate: the shell column (240ms) and the 0fr/1fr
+ * height collapse (180ms). Everything is gated on [data-ready] / [data-sb-settled] so nothing
+ * plays on first paint. */
+
+.sb-frame {
+  --sb-cur: var(--sb-w, var(--sidebar-w));
+}
+.sb-frame[data-rail="true"] {
+  --sb-cur: var(--rail-w);
+}
+@media (min-width: 768px) {
+  .sb-frame {
+    display: grid;
+    grid-template-columns: var(--sb-cur) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .sb-frame[data-ready="true"]:not([data-resizing="true"]) {
+    transition: grid-template-columns var(--dur-layout) var(--ease-out-expo);
+  }
+}
+.sb-frame[data-resizing="true"] {
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* No transitions until the stored layout state has been applied. */
+.sb-frame:not([data-ready="true"]) * {
+  transition: none !important;
+}
+
+/* Height collapse without measuring: the inner box clips, the track animates. */
+.sb-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-out-expo),
+    opacity var(--dur-base) var(--ease-out-expo);
+}
+.sb-collapse[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition-timing-function: var(--ease-in);
+}
+.sb-collapse > .sb-collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+/* Inserted already open: grow from closed (not for nodes present at first render). */
+@starting-style {
+  .sb-collapse[data-open="true"][data-grow="true"] {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+/* Tree items: new ones fade in and settle 4px, removed ones collapse out. */
+.sb-item {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-out-expo),
+    opacity var(--dur-base) var(--ease-out-expo),
+    transform var(--dur-base) var(--ease-out-expo);
+}
+.sb-item[data-leaving="true"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast);
+  transition-timing-function: var(--ease-in);
+}
+.sb-item > .sb-item-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+@starting-style {
+  [data-sb-settled="true"] .sb-item {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+/* First load only: the first six items, 200ms end to end (16ms steps + 120ms). */
+[data-sb-reveal="true"] > .sb-item:nth-child(-n + 6) {
+  animation: sb-reveal 120ms var(--ease-out-expo) backwards;
+}
+[data-sb-reveal="true"] > .sb-item:nth-child(2) { animation-delay: 16ms; }
+[data-sb-reveal="true"] > .sb-item:nth-child(3) { animation-delay: 32ms; }
+[data-sb-reveal="true"] > .sb-item:nth-child(4) { animation-delay: 48ms; }
+[data-sb-reveal="true"] > .sb-item:nth-child(5) { animation-delay: 64ms; }
+[data-sb-reveal="true"] > .sb-item:nth-child(6) { animation-delay: 80ms; }
+
+/* Row: the active fill is a layer that fades and settles in, so moving between rows hands off. */
+.sb-row {
+  position: relative;
+  isolation: isolate;
+  transition:
+    color var(--dur-fast) ease-out,
+    background-color var(--dur-fast) ease-out;
+}
+.sb-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--active);
+  opacity: 0;
+  transform: scale(0.97);
+  transition:
+    opacity var(--dur-fast) ease-out,
+    transform var(--dur-base) var(--ease-out-expo);
+}
+.sb-row[data-active="true"]::before,
+.sb-row:active::before {
+  opacity: 1;
+  transform: none;
+}
+.sb-row:not([data-active="true"]):hover {
+  background-color: var(--hover);
+}
+.sb-row:not([data-active="true"]):hover:active {
+  background-color: transparent;
+}
+
+/* Tree focus: the roving item is the <li>, the ring is drawn on its row. */
+.sb-item:focus-visible {
+  outline: none;
+}
+.sb-item:focus-visible > .sb-item-inner > .sb-row {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.sb-actions {
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease-out;
+}
+.sb-row:hover .sb-actions,
+.sb-row:focus-within .sb-actions,
+.sb-item:focus-visible > .sb-item-inner > .sb-row .sb-actions,
+.sb-actions:has([data-state="open"]) {
+  opacity: 1;
+}
+@media (hover: none) {
+  .sb-actions {
+    opacity: 1;
+  }
+}
+
+/* Scroll shadows: opacity only. */
+.sb-scroll-shadow {
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  z-index: 1;
+  height: 10px;
+  opacity: 0;
+  transition: opacity var(--dur-base) ease-out;
+}
+.sb-scroll-shadow[data-edge="top"] {
+  top: 0;
+  background: linear-gradient(to bottom, var(--scroll-shadow), transparent);
+}
+.sb-scroll-shadow[data-edge="bottom"] {
+  bottom: 0;
+  background: linear-gradient(to top, var(--scroll-shadow), transparent);
+}
+[data-scroll-top="true"] > .sb-scroll-shadow[data-edge="top"],
+[data-scroll-bottom="true"] > .sb-scroll-shadow[data-edge="bottom"] {
+  opacity: 1;
+}
+
+/* Skeleton shimmer: a gradient sweeps across on transform only. */
+.sb-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.sb-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--shimmer), transparent);
+  animation: shimmer 1.4s var(--ease-in-out) infinite;
+}
+
+/* Resize handle */
+.sb-resizer {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  z-index: 2;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.sb-resizer::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease-out;
+}
+.sb-resizer:hover::after,
+.sb-resizer:focus-visible::after,
+.sb-frame[data-resizing="true"] .sb-resizer::after {
+  opacity: 0.6;
+}
+.sb-resizer:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb-shimmer::after {
+    animation: none;
+  }
+  .sb-item,
+  .sb-row::before {
+    transform: none !important;
+  }
+  [data-sb-reveal="true"] > .sb-item {
+    animation: none !important;
   }
 }
 

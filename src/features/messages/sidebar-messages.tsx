@@ -12,12 +12,13 @@ import { CountBadge } from "@/ui/badge";
 import { IconButton } from "@/ui/icon-button";
 import { Skeleton } from "@/ui/skeleton";
 import { SidebarSection } from "@/components/shell/sidebar-section";
+import { useLeaving, useRevealOnce, useSettled } from "@/components/shell/sidebar-motion";
+import { sbRow, sbRowActive, sbRowIdle } from "@/components/shell/sidebar-styles";
 import { NewConversationMenu } from "./conversation-list";
 import { conversationLabel, conversationName, dmPartner } from "./format";
 import { openMessagesDialog } from "./stores";
 
-const rowBase =
-  "flex h-[30px] items-center gap-2 rounded-sm px-2 text-13 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring";
+const rowBase = cn(sbRow, "gap-2 px-2");
 
 function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: string; onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -31,14 +32,8 @@ function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: str
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       aria-label={`${conversationLabel(c, meId)}${unread ? `, ${c.unread_count} unread` : ""}`}
-      className={cn(
-        rowBase,
-        active
-          ? "bg-active font-semibold text-accent-text"
-          : unread
-            ? "font-semibold text-fg hover:bg-hover"
-            : "text-fg-muted hover:bg-hover hover:text-fg",
-      )}
+      data-active={active}
+      className={cn(rowBase, active ? sbRowActive : unread ? "font-semibold text-fg" : sbRowIdle)}
     >
       {partner ? (
         <Avatar user={partner} size="xs" decorative className="size-4 text-[8px]" />
@@ -48,8 +43,32 @@ function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: str
         <Hash className="size-3.5 shrink-0 text-fg-faint" aria-hidden />
       )}
       <span className="min-w-0 flex-1 truncate">{conversationName(c, meId)}</span>
-      {unread && <CountBadge count={c.unread_count} />}
+      {unread && <CountBadge count={c.unread_count} animated />}
     </Link>
+  );
+}
+
+/** One list of conversations: new ones fade in, removed ones collapse out, first load staggers once. */
+function ConversationList({ list, meId, onNavigate }: { list: Conversation[]; meId?: string; onNavigate?: () => void }) {
+  const items = useLeaving(list);
+  const settled = useSettled(true);
+  const reveal = useRevealOnce(true);
+  return (
+    <ul className="flex flex-col gap-px" data-sb-settled={settled} data-sb-reveal={reveal} suppressHydrationWarning>
+      {items.map(({ item: c, leaving }) => (
+        <li
+          key={c.id}
+          className="sb-item"
+          data-leaving={leaving}
+          aria-hidden={leaving || undefined}
+          inert={leaving}
+        >
+          <div className="sb-item-inner">
+            <ConversationLink c={c} meId={meId} onNavigate={onNavigate} />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -67,9 +86,13 @@ export function SidebarMessages({ onNavigate }: { onNavigate?: () => void }) {
 
   const body = (list: Conversation[], empty: React.ReactNode) =>
     q.isPending && workspaceId ? (
-      <div className="flex flex-col gap-2 py-1.5 pl-8" aria-hidden>
-        <Skeleton className="h-2.5 w-24" />
-        <Skeleton className="h-2.5 w-16" />
+      <div className="flex flex-col gap-px" aria-hidden>
+        {[60, 42].map((w) => (
+          <div key={w} className="flex h-[30px] items-center gap-2 px-2">
+            <Skeleton shimmer className="size-3.5 rounded-xs" />
+            <Skeleton shimmer className="h-2.5" style={{ width: `${w}%` }} />
+          </div>
+        ))}
       </div>
     ) : !q.data || !workspaceId ? (
       <p className="px-2 py-1 text-12 text-fg-faint">
@@ -83,13 +106,7 @@ export function SidebarMessages({ onNavigate }: { onNavigate?: () => void }) {
     ) : list.length === 0 ? (
       empty
     ) : (
-      <ul className="flex flex-col gap-px">
-        {list.map((c) => (
-          <li key={c.id}>
-            <ConversationLink c={c} meId={meId} onNavigate={onNavigate} />
-          </li>
-        ))}
-      </ul>
+      <ConversationList list={list} meId={meId} onNavigate={onNavigate} />
     );
 
   const quiet = (label: string, onClick: () => void) => (
@@ -99,7 +116,7 @@ export function SidebarMessages({ onNavigate }: { onNavigate?: () => void }) {
         onClick();
         onNavigate?.();
       }}
-      className={cn(rowBase, "w-full text-fg-faint hover:bg-hover hover:text-fg")}
+      className={cn(rowBase, "w-full text-fg-faint hover:text-fg")}
     >
       <Plus className="size-3.5 shrink-0" aria-hidden />
       <span className="truncate">{label}</span>
@@ -124,7 +141,8 @@ export function SidebarMessages({ onNavigate }: { onNavigate?: () => void }) {
         href="/messages"
         onClick={onNavigate}
         aria-current={allActive ? "page" : undefined}
-        className={cn(rowBase, "gap-2.5", allActive ? "bg-active font-semibold text-accent-text" : "text-fg-muted hover:bg-hover hover:text-fg")}
+        data-active={allActive}
+        className={cn(rowBase, "gap-2.5", allActive ? sbRowActive : sbRowIdle)}
       >
         <MessagesSquare className={cn("size-4 shrink-0", allActive ? "text-fg" : "text-fg-faint")} strokeWidth={1.75} aria-hidden />
         <span className="min-w-0 flex-1 truncate">All messages</span>

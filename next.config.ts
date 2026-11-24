@@ -64,6 +64,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The e2e suite builds into its own folder so it never fights a dev server or build using .next.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,

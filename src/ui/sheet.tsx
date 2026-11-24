@@ -29,13 +29,13 @@ export function SheetContent({
 }) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-[var(--z-overlay)] bg-overlay data-[state=open]:animate-in-fade" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[var(--z-overlay)] bg-overlay data-[state=open]:animate-in-fade data-[state=closed]:animate-out-fade" />
       <DialogPrimitive.Content
         className={cn(
           "fixed inset-y-0 z-[var(--z-modal)] flex flex-col bg-surface-raised text-fg shadow-dialog outline-none",
           side === "right"
-            ? "right-0 w-[min(480px,100vw)] border-l border-border data-[state=open]:animate-in-sheet"
-            : "left-0 w-[min(300px,86vw)] border-r border-border data-[state=open]:animate-in-drawer",
+            ? "right-0 w-[min(480px,100vw)] border-l border-border data-[state=open]:animate-in-sheet data-[state=closed]:animate-out-sheet"
+            : "left-0 w-[min(300px,86vw)] border-r border-border data-[state=open]:animate-in-drawer data-[state=closed]:animate-out-drawer",
           className,
         )}
         {...props}

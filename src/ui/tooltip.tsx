@@ -1,6 +1,7 @@
 "use client";
 
 import { Tooltip as TooltipPrimitive } from "radix-ui";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { KbdCombo } from "./kbd";
 
@@ -15,16 +16,20 @@ export function Tooltip({
   shortcut,
   side = "bottom",
   align = "center",
+  disabled,
   children,
 }: {
   content: React.ReactNode;
   shortcut?: string[];
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
+  /** Keep the trigger mounted but never show the tip (for example when a label is already visible). */
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <TooltipPrimitive.Root>
+    <TooltipPrimitive.Root open={open && !disabled} onOpenChange={setOpen}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content
@@ -33,7 +38,7 @@ export function Tooltip({
           sideOffset={6}
           className={cn(
             "z-[var(--z-tooltip)] flex items-center gap-2 rounded-sm bg-fg px-2 py-1 text-12 font-medium text-surface",
-            "shadow-popover data-[state=delayed-open]:animate-in-fade",
+            "origin-[var(--radix-tooltip-content-transform-origin)] shadow-popover data-[state=delayed-open]:animate-in-fade data-[state=closed]:animate-out-fade",
           )}
         >
           {content}

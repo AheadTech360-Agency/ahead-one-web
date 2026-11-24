@@ -6,6 +6,7 @@ node_modules
 
 # builds and local files
 .next/
+.next-e2e/
 out/
 coverage/
 playwright-report/
@@ -14,3 +15,4 @@ test-results/
 .env.*
 !.env.example
 .DS_Store
+e2e/.state/

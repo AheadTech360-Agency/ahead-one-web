@@ -1,4 +1,7 @@
+"use client";
+
 import { Flag } from "lucide-react";
+import { useBump } from "@/lib/hooks/use-bump";
 import { cn } from "@/lib/utils";
 import type { Priority, StatusCategory } from "@/lib/api/types";
 
@@ -36,11 +39,14 @@ export function Badge({
 }
 
 /** Count bubble for nav rows and the bell. */
-export function CountBadge({ count, className }: { count: number; className?: string }) {
+export function CountBadge({ count, className, animated }: { count: number; className?: string; animated?: boolean }) {
+  const bump = useBump(count);
   if (count <= 0) return null;
   return (
     <span
+      key={animated ? bump : undefined}
       className={cn(
+        animated && bump > 0 && "animate-badge",
         "inline-flex h-4 min-w-4 flex-none items-center justify-center rounded-full bg-green px-1 text-11 font-bold leading-none text-navy-deep tabular",
         className,
       )}

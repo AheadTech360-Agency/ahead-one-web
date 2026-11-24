@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
  * Escape to close and focus restore to the trigger.
  */
 
-const contentClass =
-  "z-[var(--z-popover)] min-w-44 overflow-hidden rounded-md border border-border bg-surface-raised p-1 text-13 text-fg shadow-popover " +
-  "data-[state=open]:animate-in-pop";
+const baseContent =
+  "z-[var(--z-popover)] min-w-44 overflow-hidden rounded-md border border-border bg-surface-raised p-1 text-13 text-fg shadow-popover data-[side=top]:[--pop-y:4px] data-[side=bottom]:[--pop-y:-4px] data-[side=left]:[--pop-x:4px] data-[side=right]:[--pop-x:-4px] data-[state=open]:animate-in-pop data-[state=closed]:animate-out-pop";
+/* Scale and fade grow from the anchor: Radix exposes the origin as a CSS variable per menu kind. */
+const contentClass = baseContent + " origin-[var(--radix-dropdown-menu-content-transform-origin)]";
+const contextContentClass = baseContent + " origin-[var(--radix-context-menu-content-transform-origin)]";
 
 const itemClass =
   "relative flex h-8 cursor-default select-none items-center gap-2 rounded-xs px-2 outline-none " +
@@ -139,7 +141,7 @@ export function ContextMenuContent({
 }: React.ComponentProps<typeof ContextPrimitive.Content>) {
   return (
     <ContextPrimitive.Portal>
-      <ContextPrimitive.Content className={cn(contentClass, className)} {...props} />
+      <ContextPrimitive.Content className={cn(contextContentClass, className)} {...props} />
     </ContextPrimitive.Portal>
   );
 }

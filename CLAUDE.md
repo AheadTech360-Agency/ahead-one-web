@@ -44,5 +44,19 @@ CI (`.github/workflows/ci.yml`) runs the same on every PR.
 ## Deploy (Vercel)
 
 - Import the repo in Vercel (framework: Next.js; no custom build settings).
-- Environment variables: `NEXT_PUBLIC_API_URL=https://api.tasks.aheadtech360.com`, optionally `API_INTERNAL_URL`, and the `NEXT_PUBLIC_FIREBASE_*` values for web push.
+- Environment variables: `NEXT_PUBLIC_API_URL=https://api.tasks.aheadtech360.com`, `BFF_SECRET` (the same value as on the API; server-side only), optionally `API_INTERNAL_URL`, and the `NEXT_PUBLIC_FIREBASE_*` values for web push.
 - Domain `tasks.aheadtech360.com` through Cloudflare DNS (CNAME to Vercel). The API's `WEB_ORIGIN` must be exactly this origin, and the API hostname must be a sibling under the same site so the auth cookie works (`__Host-` cookies are host-only and first-party).
+
+## End-to-end tests
+
+Playwright (Chromium) drives the whole product journey against a real API: invite, sign-in with the emailed code, project, task, @mention, live notification, DM.
+
+```
+npm run e2e         # headless; npm run e2e:ui for the UI runner
+```
+
+`e2e/global-setup.ts` starts the API binary (emails are logged to `e2e/.state/api.log`, where the helpers read sign-in codes and invite links) and the web app (`next build` into `.next-e2e`, then `next start`), creates a fresh workspace with unique `e2e-<ts>-*@dev.test` emails, and stops what it started. The API runs with `APP_ENV=development`, `EMAIL_LOG_BODIES=1`, no SMTP, Redis or FCM.
+
+Env knobs: `E2E_API_BIN` (default `D:/ahead-one/.target-test/debug/tasks-api.exe`; build with `cargo build -p server` in the API repo), `E2E_API_DIR` (default `../ahead-one-api`, where its `.env` is loaded), `E2E_API_PORT` (8091), `E2E_WEB_PORT` (3100), `E2E_REUSE=1` (use servers already listening), `E2E_SKIP_BUILD=1` (reuse the last `.next-e2e` build).
+
+CI runs the `e2e` job only when the repository variable `E2E_ENABLED` is `true`. It needs the secret `API_REPO_TOKEN` (a token that can read `AheadTech360-Agency/ahead-one-api`), builds the API against a Postgres 16 service and uploads `playwright-report` on failure.

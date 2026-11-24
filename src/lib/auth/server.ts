@@ -56,6 +56,14 @@ export async function callApi(req: NextRequest, path: string, payload: unknown):
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json" };
   const xff = req.headers.get("x-forwarded-for");
   if (xff) headers["x-forwarded-for"] = xff;
+  // Prove to the API that this call comes from our server, so it can trust the client address we pass
+  // (otherwise every user would share this server's address in the rate limits and audit records).
+  const secret = process.env.BFF_SECRET;
+  if (secret) {
+    const client = req.headers.get("x-real-ip") ?? xff?.split(",")[0]?.trim();
+    if (client) headers["x-client-ip"] = client;
+    headers["x-bff-secret"] = secret;
+  }
   const ua = req.headers.get("user-agent");
   if (ua) headers["user-agent"] = ua;
   try {

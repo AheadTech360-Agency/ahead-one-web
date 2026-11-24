@@ -114,6 +114,9 @@
 
   /* Layout */
   --sidebar-w: 248px;
+  --sidebar-min: 220px;
+  --sidebar-max: 360px;
+  --rail-w: 52px;
   --topbar-h: 44px;
   --control-h-sm: 28px;
   --control-h: 32px;
@@ -137,6 +140,11 @@
   --dur-slow: 260ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-layout: 240ms; /* sidebar column, drawer */
+  --ease-out-expo: cubic-bezier(0.22, 1, 0.36, 1); /* confident, no overshoot */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1); /* exits */
+  --scroll-shadow: rgb(20 43 84 / 0.1);
+  --shimmer: rgb(255 255 255 / 0.55);
 }
 
 /*
@@ -213,6 +221,9 @@
   --mark-navy: #7ea2e4;
   --mark-green: #2fc884;
 
+  --scroll-shadow: rgb(0 0 0 / 0.3);
+  --shimmer: rgb(174 192 224 / 0.12);
+
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-popover: 0 0 0 1px rgb(174 192 224 / 0.06), 0 8px 24px rgb(2 6 15 / 0.55);
   --shadow-dialog: 0 0 0 1px rgb(174 192 224 / 0.06), 0 24px 64px rgb(2 6 15 / 0.65);
@@ -224,5 +235,6 @@
     --dur-fast: 0ms;
     --dur-base: 0ms;
     --dur-slow: 0ms;
+    --dur-layout: 0ms;
   }
 }
