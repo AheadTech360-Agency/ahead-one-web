@@ -73,8 +73,23 @@ export function setAuthHandlers(next: AuthHandlers | null) {
 
 let redirecting = false;
 
+/**
+ * Every API path is `/v1/` plus plain segments (ids, names). Refusing anything else stops a crafted
+ * id from a URL, deep link or push payload (`../`, `%2F`, `?`, `#`, backslashes) from steering an
+ * authenticated request to a different endpoint (client-side path traversal).
+ */
+const SAFE_API_PATH = /^\/v1(\/[A-Za-z0-9_-]+)+$/;
+
+export function assertSafeApiPath(path: string): string {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  if (!SAFE_API_PATH.test(p)) {
+    throw new Error("Refused to call an unexpected API path");
+  }
+  return p;
+}
+
 function buildUrl(path: string, query?: Query) {
-  const url = new URL(`${env.apiUrl}${path.startsWith("/") ? path : `/${path}`}`);
+  const url = new URL(`${env.apiUrl}${assertSafeApiPath(path)}`);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
