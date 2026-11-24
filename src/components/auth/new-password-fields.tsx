@@ -14,6 +14,34 @@ export function validateNewPassword(password: string, confirm: string) {
   return errors;
 }
 
+type Strength = { level: 0 | 1 | 2 | 3; label: string };
+
+/** A length-first hint, not a policy: the API only enforces 12 to 128 characters. */
+export function passwordStrength(pw: string): Strength {
+  if (pw.length < PASSWORD_MIN) return { level: 0, label: pw ? `${PASSWORD_MIN - pw.length} more to go` : "" };
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter((r) => r.test(pw)).length;
+  const score = (pw.length >= 16 ? 1 : 0) + (pw.length >= 22 ? 1 : 0) + (kinds >= 3 ? 1 : 0);
+  if (score >= 2) return { level: 3, label: "Strong" };
+  if (score === 1) return { level: 2, label: "Good" };
+  return { level: 1, label: "Okay. Longer is stronger" };
+}
+
+function StrengthHint({ password }: { password: string }) {
+  const { level, label } = passwordStrength(password);
+  if (!password) return null;
+  const color = level === 0 ? "bg-danger" : level === 1 ? "bg-warning" : "bg-green";
+  return (
+    <div className="-mt-2 flex items-center gap-2" aria-hidden={false}>
+      <span aria-hidden className="flex flex-1 gap-1">
+        {[1, 2, 3].map((i) => (
+          <span key={i} className={`h-1 flex-1 ${i <= level || (level === 0 && i === 1) ? color : "bg-border"}`} />
+        ))}
+      </span>
+      <span className="w-40 text-12 text-fg-muted">{label}</span>
+    </div>
+  );
+}
+
 /** New password plus confirmation, with the length rule shown up front. */
 export function NewPasswordFields({
   password,
@@ -39,6 +67,7 @@ export function NewPasswordFields({
           onChange={(e) => onPassword(e.target.value)}
         />
       </Field>
+      <StrengthHint password={password} />
       <Field label="Confirm password" error={errors.confirm}>
         <PasswordInput
           autoComplete="new-password"

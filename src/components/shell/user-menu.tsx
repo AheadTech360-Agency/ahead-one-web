@@ -2,11 +2,8 @@
 
 import { Keyboard, LogOut, Monitor, Moon, Sun, UserRound } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useQueryClient } from "@tanstack/react-query";
-import { getSupabase } from "@/lib/supabase/client";
-import { unregisterPushOnSignOut } from "@/features/push/push";
+import { signOut } from "@/lib/auth/client";
 import { useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
 import {
@@ -22,31 +19,12 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/menu";
-import { toast } from "@/ui/toaster";
 import { useShell } from "./shell-context";
-
-export function useSignOut() {
-  const router = useRouter();
-  const qc = useQueryClient();
-  return async () => {
-    // Remove this browser's push token while the session can still authorise the request.
-    await unregisterPushOnSignOut();
-    try {
-      await getSupabase().auth.signOut();
-    } catch {
-      toast.error("Couldn't reach the sign-in service. You've been signed out on this device.");
-    }
-    qc.clear();
-    router.replace("/login");
-    router.refresh();
-  };
-}
 
 export function UserMenu() {
   const { me } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const { setShortcutsOpen } = useShell();
-  const signOut = useSignOut();
   const user = me?.user;
 
   return (

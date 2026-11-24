@@ -5,6 +5,15 @@ import type { Profile } from "./Profile";
 
 export type MeResponse = { user: Profile, memberships: Array<Membership>, aal: Aal, 
 /**
- * True when the caller holds a role that requires TOTP and this session is not aal2.
+ * True when the caller holds a role that requires 2FA and this session did not pass it:
+ * sign out and sign in again to get the email code step.
  */
-mfa_required: boolean, };
+mfa_required: boolean, 
+/**
+ * Whether the account has the emailed second factor switched on.
+ */
+two_factor_enabled: boolean, 
+/**
+ * Owners and Admins can't switch it off.
+ */
+two_factor_required: boolean, };

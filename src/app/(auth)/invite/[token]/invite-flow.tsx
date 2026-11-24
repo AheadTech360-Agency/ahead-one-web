@@ -7,11 +7,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AuthCard, ConfigMissing, FormError } from "@/components/auth/auth-card";
 import { NewPasswordFields, validateNewPassword } from "@/components/auth/new-password-fields";
-import { errorMessage, isApiError } from "@/lib/api/client";
+import { TwoFactorStep } from "@/components/auth/two-factor-step";
+import { api, errorMessage, isApiError } from "@/lib/api/client";
 import { acceptInvite, registerInvite, useInvitePreview } from "@/lib/api/hooks";
-import type { InvitePreview, Role } from "@/lib/api/types";
-import { isSupabaseConfigured } from "@/lib/env";
-import { getSupabase } from "@/lib/supabase/client";
+import type { InvitePreview, MeResponse } from "@/lib/api/types";
+import { getAccessToken, signIn, signOut } from "@/lib/auth/client";
+import type { TwoFactorChallenge } from "@/lib/auth/types";
+import { isApiConfigured } from "@/lib/env";
 import { ROLE_LABEL } from "@/lib/workspace";
 import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty-state";
@@ -20,21 +22,19 @@ import { Input } from "@/ui/input";
 import { PasswordInput } from "@/ui/password-input";
 import { Skeleton } from "@/ui/skeleton";
 
-/** Roles that must enrol TOTP before using the app (contract: mfa_required for owner/admin). */
-const MFA_ROLES: Role[] = ["owner", "admin"];
-
 /*
  * Invite flow:
  *   GET /v1/invites/preview?token=  (public)
  *   account_exists = false: full name + password -> POST /v1/invites/register -> sign in -> app
  *   account_exists = true:  sign in (inline) -> POST /v1/invites/accept -> app
- * Owners and admins continue to /setup-mfa (or /login/mfa) before landing in the app.
+ * Roles that need the emailed code (Owner, Admin, anyone who opted in) get the code step in place
+ * after the password, then continue to the app.
  */
 export function InviteFlow() {
   const { token } = useParams<{ token: string }>();
   const preview = useInvitePreview(token);
 
-  if (!isSupabaseConfigured) {
+  if (!isApiConfigured) {
     return (
       <AuthCard title="Join workspace">
         <ConfigMissing />
@@ -110,19 +110,6 @@ function InviteSummary({ p }: { p: InvitePreview }) {
   );
 }
 
-/** After sign-in: step up or enrol MFA when the role needs it, otherwise go to the app. */
-async function continueAfterSignIn(role: Role, router: ReturnType<typeof useRouter>) {
-  const { data } = await getSupabase().auth.mfa.getAuthenticatorAssuranceLevel();
-  if (data?.currentLevel === "aal1" && data.nextLevel === "aal2") {
-    router.replace("/login/mfa?next=/");
-  } else if (MFA_ROLES.includes(role) && data?.currentLevel !== "aal2") {
-    router.replace("/setup-mfa?next=/");
-  } else {
-    router.replace("/");
-  }
-  router.refresh();
-}
-
 function Register({ token, preview }: { token: string; preview: InvitePreview }) {
   const router = useRouter();
   const qc = useQueryClient();
@@ -131,10 +118,19 @@ function Register({ token, preview }: { token: string; preview: InvitePreview })
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<{ name?: string; password?: string; confirm?: string; form?: string }>({});
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
+
+  function done() {
+    router.replace("/");
+    router.refresh();
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const v = { ...validateNewPassword(password, confirm), name: name.trim() ? undefined : "Enter your name as teammates should see it." };
+    const v = {
+      ...validateNewPassword(password, confirm),
+      name: name.trim() ? undefined : "Enter your name as teammates should see it.",
+    };
     setErrors(v);
     if (v.name || v.password || v.confirm) return;
     setPending(true);
@@ -152,14 +148,29 @@ function Register({ token, preview }: { token: string; preview: InvitePreview })
       }
       return;
     }
-    const { error } = await getSupabase().auth.signInWithPassword({ email: preview.email, password });
-    if (error) {
-      setPending(false);
-      // Account exists now; send them to sign in normally.
-      router.replace(`/login?next=/`);
-      return;
+    try {
+      const result = await signIn(preview.email, password);
+      if (result.kind === "two_factor") {
+        setChallenge(result.challenge);
+        setPending(false);
+        return;
+      }
+      done();
+    } catch {
+      // The account exists now; sign in the usual way.
+      router.replace("/login");
     }
-    await continueAfterSignIn(preview.role, router);
+  }
+
+  if (challenge) {
+    return (
+      <AuthCard
+        title="Check your email"
+        description={`Your account is ready. Confirm it's you to join ${preview.workspace_name}.`}
+      >
+        <TwoFactorStep challenge={challenge} onVerified={done} onBack={() => router.replace("/login")} />
+      </AuthCard>
+    );
   }
 
   return (
@@ -169,7 +180,10 @@ function Register({ token, preview }: { token: string; preview: InvitePreview })
       footer={
         <>
           Already have an account?{" "}
-          <Link href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`} className="font-medium text-fg hover:underline">
+          <Link
+            href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
+            className="font-medium text-fg hover:underline"
+          >
             Sign in
           </Link>
         </>
@@ -214,18 +228,25 @@ function Register({ token, preview }: { token: string; preview: InvitePreview })
 
 function AcceptWithSignIn({ token, preview }: { token: string; preview: InvitePreview }) {
   const router = useRouter();
+  /** undefined while checking, null when signed out. */
   const [sessionEmail, setSessionEmail] = useState<string | null | undefined>(undefined);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void getSupabase()
-      .auth.getUser()
-      .then(({ data }) => {
-        if (!cancelled) setSessionEmail(data.user?.email ?? null);
-      });
+    void (async () => {
+      try {
+        // No refresh cookie means no session, and this answers quickly.
+        const t = await getAccessToken();
+        const me = t ? await api<MeResponse>("/v1/me", { quiet: true }) : null;
+        if (!cancelled) setSessionEmail(me?.user.email ?? null);
+      } catch {
+        if (!cancelled) setSessionEmail(null);
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -240,10 +261,6 @@ function AcceptWithSignIn({ token, preview }: { token: string; preview: InvitePr
       await acceptInvite(token);
     } catch (err) {
       setPending(false);
-      if (isApiError(err) && err.code === "mfa_required") {
-        router.replace(`/login/mfa?next=${encodeURIComponent(`/invite/${token}`)}`);
-        return;
-      }
       setError(
         isApiError(err) && err.code === "forbidden"
           ? `This invite is for ${preview.email}. Sign in with that email to accept it.`
@@ -251,7 +268,8 @@ function AcceptWithSignIn({ token, preview }: { token: string; preview: InvitePr
       );
       return;
     }
-    await continueAfterSignIn(preview.role, router);
+    router.replace("/");
+    router.refresh();
   }
 
   async function signInAndAccept(e: React.FormEvent) {
@@ -262,35 +280,47 @@ function AcceptWithSignIn({ token, preview }: { token: string; preview: InvitePr
     }
     setPending(true);
     setError(undefined);
-    const supabase = getSupabase();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email: preview.email, password });
-    if (signInError) {
+    try {
+      const result = await signIn(preview.email, password);
+      if (result.kind === "two_factor") {
+        setChallenge(result.challenge);
+        setPending(false);
+        return;
+      }
+    } catch (err) {
       setPending(false);
       setError(
-        signInError.code === "invalid_credentials"
-          ? "That password doesn't match this account."
-          : signInError.message,
+        isApiError(err) && err.code === "invalid_credentials"
+          ? "That password doesn't match this account. Check it, or reset your password."
+          : errorMessage(err),
       );
-      return;
-    }
-    const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (data?.currentLevel === "aal1" && data.nextLevel === "aal2") {
-      // Verify the code first, then come back here to accept.
-      router.replace(`/login/mfa?next=${encodeURIComponent(`/invite/${token}`)}`);
       return;
     }
     await accept();
   }
 
   async function switchAccount() {
-    await getSupabase().auth.signOut();
+    await signOut({ redirect: false });
     setSessionEmail(null);
+  }
+
+  if (challenge) {
+    return (
+      <AuthCard title="Check your email" description={`Confirm it's you to join ${preview.workspace_name}.`}>
+        <TwoFactorStep challenge={challenge} onVerified={accept} onBack={() => setChallenge(null)} />
+        <div className="mt-4">
+          <FormError>{error}</FormError>
+        </div>
+      </AuthCard>
+    );
   }
 
   return (
     <AuthCard
       title={`Join ${preview.workspace_name}`}
-      description={signedInAsInvitee ? "You're signed in with the invited email." : "You already have an account. Sign in to accept."}
+      description={
+        signedInAsInvitee ? "You're signed in with the invited email." : "You already have an account. Sign in to accept."
+      }
     >
       <InviteSummary p={preview} />
       {sessionEmail === undefined ? (
@@ -314,7 +344,7 @@ function AcceptWithSignIn({ token, preview }: { token: string; preview: InvitePr
       ) : (
         <form onSubmit={signInAndAccept} noValidate className="flex flex-col gap-4">
           <Field label="Email">
-            <Input value={preview.email} readOnly disabled size="lg" />
+            <Input value={preview.email} readOnly autoComplete="username" size="lg" />
           </Field>
           <Field label="Password" error={error}>
             <PasswordInput

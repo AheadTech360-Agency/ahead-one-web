@@ -1,13 +1,20 @@
 "use client";
 
-import { CircleAlert, Monitor, Moon, RotateCw, Sun } from "lucide-react";
+import { CircleAlert, Monitor, Moon, RotateCw, ShieldCheck, Sun } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/page";
-import { errorMessage } from "@/lib/api/client";
-import { useNotificationPrefs, useUpdateMe, useUpdateNotificationPrefs } from "@/lib/api/hooks";
-import type { NotificationKind, NotificationPrefs, Profile } from "@/lib/api/types";
+import { NewPasswordFields, validateNewPassword } from "@/components/auth/new-password-fields";
+import { errorMessage, isApiError } from "@/lib/api/client";
+import {
+  useChangePassword,
+  useNotificationPrefs,
+  useSetTwoFactor,
+  useUpdateMe,
+  useUpdateNotificationPrefs,
+} from "@/lib/api/hooks";
+import type { MeResponse, NotificationKind, NotificationPrefs, Profile } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
@@ -16,13 +23,14 @@ import { Checkbox, Switch } from "@/ui/checkbox";
 import { EmptyState } from "@/ui/empty-state";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
+import { PasswordInput } from "@/ui/password-input";
 import { Select } from "@/ui/select";
 import { Skeleton, SkeletonRows } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { toast } from "@/ui/toaster";
 import { BrowserPushControl } from "@/features/push/push-controls";
 
-const TABS = ["profile", "appearance", "notifications"] as const;
+const TABS = ["profile", "appearance", "notifications", "security"] as const;
 type Tab = (typeof TABS)[number];
 
 export function AccountSettings() {
@@ -44,6 +52,7 @@ export function AccountSettings() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="pt-6 outline-none">
           <ProfileTab />
@@ -53,6 +62,9 @@ export function AccountSettings() {
         </TabsContent>
         <TabsContent value="notifications" className="pt-6 outline-none">
           <NotificationsTab />
+        </TabsContent>
+        <TabsContent value="security" className="pt-6 outline-none">
+          <SecurityTab />
         </TabsContent>
       </Tabs>
     </>
@@ -356,5 +368,230 @@ function NotificationPrefsForm({ initial }: { initial: NotificationPrefs }) {
         onCheckedChange={(v) => commit({ ...prefs, daily_digest: v })}
       />
     </div>
+  );
+}
+
+/* ---------- Security ---------- */
+
+function SecurityTab() {
+  const { me, meStatus, meError, refetchMe } = useWorkspace();
+  if (meStatus === "pending") return <SkeletonRows rows={4} columns={[40, 20]} />;
+  if (meStatus === "error" || !me) {
+    return (
+      <EmptyState
+        compact
+        tone="danger"
+        icon={CircleAlert}
+        title="Couldn't load your security settings"
+        description={errorMessage(meError)}
+        action={
+          <Button size="sm" onClick={refetchMe}>
+            <RotateCw aria-hidden /> Retry
+          </Button>
+        }
+      />
+    );
+  }
+  return (
+    <div className="flex max-w-xl flex-col gap-10">
+      <SessionSection me={me} />
+      <TwoFactorSection me={me} />
+      <PasswordSection />
+    </div>
+  );
+}
+
+function SectionHead({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h2 className="text-14 font-semibold">{title}</h2>
+      <p className="mt-0.5 text-13 text-fg-muted">{children}</p>
+    </div>
+  );
+}
+
+function SessionSection({ me }: { me: MeResponse }) {
+  const confirmed = me.aal === "aal2";
+  return (
+    <section aria-labelledby="sec-session" className="flex flex-col gap-3">
+      <div id="sec-session">
+        <SectionHead title="This session">How you signed in on this device.</SectionHead>
+      </div>
+      <p className="flex items-center gap-2 rounded-md bg-surface-sunken px-3 py-2.5 text-13">
+        <ShieldCheck className={cn("size-4 shrink-0", confirmed ? "text-green-text" : "text-fg-faint")} aria-hidden />
+        <span>
+          <span className="font-medium">{confirmed ? "Password and email code" : "Password only"}</span>
+          <span className="text-fg-muted">
+            {confirmed ? " (confirmed with a code sent to your email)" : " (no email code was needed for this sign-in)"}
+          </span>
+        </span>
+      </p>
+    </section>
+  );
+}
+
+function TwoFactorSection({ me }: { me: MeResponse }) {
+  const set = useSetTwoFactor();
+  const [target, setTarget] = useState<boolean | null>(null);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | undefined>();
+  const required = me.two_factor_required;
+  const enabled = me.two_factor_enabled;
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (target === null) return;
+    if (!password) {
+      setError("Enter your password to confirm.");
+      return;
+    }
+    set.mutate(
+      { enabled: target, password },
+      {
+        onSuccess: () => {
+          toast.success(target ? "Email codes turned on" : "Email codes turned off");
+          setTarget(null);
+          setPassword("");
+          setError(undefined);
+        },
+        onError: (err) => {
+          if (isApiError(err) && err.code === "invalid_credentials") setError("That password doesn't match. Try again.");
+          else if (isApiError(err) && err.code === "conflict")
+            setError("Your role requires email codes, so they can't be turned off.");
+          else setError(errorMessage(err));
+        },
+      },
+    );
+  }
+
+  return (
+    <section aria-labelledby="sec-2fa" className="flex flex-col gap-3">
+      <div id="sec-2fa">
+        <SectionHead title="Email code at sign-in">
+          After your password, we email a 6-digit code to confirm it&apos;s you.
+        </SectionHead>
+      </div>
+      <Switch
+        label="Require an email code"
+        description={
+          required
+            ? "Required for Owners and Admins, so this can't be turned off."
+            : enabled
+              ? "On. You'll get a code every time you sign in."
+              : "Off. Turn it on for an extra check when you sign in."
+        }
+        checked={target ?? enabled}
+        disabled={required || set.isPending}
+        onCheckedChange={(v) => {
+          setTarget(v === enabled ? null : v);
+          setError(undefined);
+          setPassword("");
+        }}
+      />
+      {target !== null && !required && (
+        <form onSubmit={submit} noValidate className="flex flex-col gap-3 rounded-md border border-border p-3">
+          <Field label="Confirm with your password" error={error}>
+            <PasswordInput
+              autoFocus
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError(undefined);
+              }}
+            />
+          </Field>
+          <div className="flex gap-2">
+            <Button type="submit" variant="primary" loading={set.isPending}>
+              {target ? "Turn on email codes" : "Turn off email codes"}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setTarget(null)} disabled={set.isPending}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
+function PasswordSection() {
+  const change = useChangePassword();
+  const [current, setCurrent] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<{ current?: string; password?: string; confirm?: string; form?: string }>({});
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const v = {
+      ...validateNewPassword(password, confirm),
+      current: current ? undefined : "Enter your current password.",
+    };
+    setErrors(v);
+    if (v.current || v.password || v.confirm) return;
+    change.mutate(
+      { current_password: current, new_password: password },
+      {
+        onSuccess: () => {
+          toast.success("Password changed", { description: "Your other devices have been signed out." });
+          setCurrent("");
+          setPassword("");
+          setConfirm("");
+        },
+        onError: (err) => {
+          if (isApiError(err) && err.code === "invalid_credentials")
+            setErrors({ current: "That isn't your current password. Try again." });
+          else if (isApiError(err) && err.code === "validation")
+            setErrors({ password: err.message || "Choose a password between 12 and 128 characters." });
+          else setErrors({ form: errorMessage(err) });
+        },
+      },
+    );
+  }
+
+  return (
+    <section aria-labelledby="sec-pw" className="flex flex-col gap-3">
+      <div id="sec-pw">
+        <SectionHead title="Change password">
+          You stay signed in here. Every other device is signed out and needs the new password.
+        </SectionHead>
+      </div>
+      <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+        <Field label="Current password" error={errors.current}>
+          <PasswordInput
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => {
+              setCurrent(e.target.value);
+              if (errors.current) setErrors((x) => ({ ...x, current: undefined }));
+            }}
+          />
+        </Field>
+        <NewPasswordFields
+          password={password}
+          confirm={confirm}
+          onPassword={(v) => {
+            setPassword(v);
+            if (errors.password) setErrors((x) => ({ ...x, password: undefined }));
+          }}
+          onConfirm={(v) => {
+            setConfirm(v);
+            if (errors.confirm) setErrors((x) => ({ ...x, confirm: undefined }));
+          }}
+          errors={errors}
+        />
+        {errors.form && (
+          <p role="alert" className="rounded-sm bg-danger-subtle px-3 py-2 text-13 text-danger-text">
+            {errors.form}
+          </p>
+        )}
+        <div>
+          <Button type="submit" variant="primary" loading={change.isPending}>
+            Change password
+          </Button>
+        </div>
+      </form>
+    </section>
   );
 }

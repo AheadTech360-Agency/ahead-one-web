@@ -15,7 +15,8 @@ import type { WsClientEvent, WsServerEvent } from "@/lib/api/types";
 
 export type RealtimeStatus = "idle" | "connecting" | "open" | "reconnecting" | "offline" | "paused";
 
-type TokenSource = (opts?: { refresh?: boolean }) => Promise<string | null>;
+/** `refresh`: the server rejected the last token. `fresh`: the server asked for a new one (it expires within two minutes). */
+type TokenSource = (opts?: { refresh?: boolean; fresh?: boolean }) => Promise<string | null>;
 
 const PING_EVERY = 25_000;
 const AUTH_TIMEOUT = 12_000;
@@ -105,7 +106,7 @@ export class RealtimeClient {
   /** Send a fresh auth frame on the open socket (token refreshed, or the server asked). */
   async reauth(token?: string) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    const t = token ?? (await this.getToken());
+    const t = token ?? (await this.getToken({ fresh: true }));
     if (!t) return;
     try {
       this.ws.send(JSON.stringify({ type: "auth", token: t } satisfies WsClientEvent));

@@ -10,6 +10,10 @@ import { api } from "./client";
 import { qk } from "./keys";
 import type {
   AcceptInvite,
+  ChangePassword,
+  ForgotPassword,
+  ResetPassword,
+  SetTwoFactor,
   AuditEntry,
   Conversation,
   CreateInvite,
@@ -59,6 +63,35 @@ export function useRoles() {
     queryFn: ({ signal }) => api<Role[]>("/v1/roles", { signal }),
     staleTime: Infinity,
   });
+}
+
+/* ---------- Account security ---------- */
+
+/** Signs every other device out; this session stays. */
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: (body: ChangePassword) => api<void>("/v1/me/password", { method: "PUT", body }),
+  });
+}
+
+export function useSetTwoFactor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SetTwoFactor) => api<void>("/v1/me/two-factor", { method: "PUT", body }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.me() }),
+  });
+}
+
+/** Public. Always 202, whether or not the address has an account. */
+export function requestPasswordReset(email: string) {
+  const body: ForgotPassword = { email };
+  return api<void>("/v1/auth/password/forgot", { method: "POST", body, anonymous: true });
+}
+
+/** Public. Signs every session out. */
+export function resetPassword(token: string, password: string) {
+  const body: ResetPassword = { token, password };
+  return api<void>("/v1/auth/password/reset", { method: "POST", body, anonymous: true });
 }
 
 /* ---------- Members ---------- */
@@ -142,7 +175,7 @@ export function acceptInvite(token: string) {
   return api<Membership>("/v1/invites/accept", { method: "POST", body });
 }
 
-/** New account: the server creates the Supabase user and the membership (public route). */
+/** New account: the server creates the account and the membership (public route). */
 export function registerInvite(body: RegisterInvite) {
   return api<Membership>("/v1/invites/register", { method: "POST", body, anonymous: true });
 }

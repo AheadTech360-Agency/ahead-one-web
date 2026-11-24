@@ -51,6 +51,8 @@ const me: MeResponse = {
   memberships: [{ workspace: { id: WS, name: "AheadTech360", slug: "aheadtech360" }, role: "admin" }],
   aal: "aal2",
   mfa_required: false,
+    two_factor_enabled: true,
+    two_factor_required: true,
 };
 const members: Member[] = PEOPLE.map((p, i) => ({ user: p, role: i === 0 ? "admin" : "member", joined_at: at(60 * 24 * 90) }));
 

@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { z } from "zod";
 import { AuthCard, ConfigMissing, FormError, FormNotice } from "@/components/auth/auth-card";
-import { isSupabaseConfigured } from "@/lib/env";
-import { getSupabase } from "@/lib/supabase/client";
+import { isApiError } from "@/lib/api/errors";
+import { requestPasswordReset } from "@/lib/api/hooks";
+import { isApiConfigured } from "@/lib/env";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
@@ -30,17 +31,15 @@ export default function ForgotPasswordPage() {
     setPending(true);
     setFormError(undefined);
     try {
-      const { error: sendError } = await getSupabase().auth.resetPasswordForEmail(parsed.data, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      // Same answer whether or not the account exists, so the form can't be used to probe emails.
-      if (sendError && sendError.status === 429) {
+      await requestPasswordReset(parsed.data);
+      // The API answers the same way whether or not the account exists.
+      setSent(true);
+    } catch (err) {
+      if (isApiError(err) && err.code === "rate_limited") {
         setFormError("Too many requests. Wait a minute and try again.");
       } else {
-        setSent(true);
+        setFormError("Can't reach the sign-in service. Check your connection and try again.");
       }
-    } catch {
-      setFormError("Can't reach the sign-in service. Check your connection and try again.");
     } finally {
       setPending(false);
     }
@@ -59,18 +58,29 @@ export default function ForgotPasswordPage() {
         </Link>
       }
     >
-      {!isSupabaseConfigured ? (
+      {!isApiConfigured ? (
         <ConfigMissing />
       ) : sent ? (
-        <FormNotice>
-          If an account exists for {email.trim()}, a reset link is on its way. Check your inbox and spam folder.
-        </FormNotice>
+        <div className="flex flex-col gap-3">
+          <FormNotice>If that address has an account, we&apos;ve emailed a link.</FormNotice>
+          <p className="text-13 text-fg-muted">
+            It works once and expires in an hour. Nothing yet? Check spam, or{" "}
+            <button
+              type="button"
+              onClick={() => setSent(false)}
+              className="rounded-xs font-medium text-accent-text underline underline-offset-4 hover:decoration-green focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              try another address
+            </button>
+            .
+          </p>
+        </div>
       ) : (
         <form onSubmit={submit} noValidate className="flex flex-col gap-4">
           <Field label="Email" error={error}>
             <Input
               type="email"
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
               size="lg"
               value={email}

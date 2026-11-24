@@ -14,7 +14,6 @@ function origins(raw: string | undefined): string[] {
   }
 }
 
-const supabase = origins(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const api = origins(process.env.NEXT_PUBLIC_API_URL);
 
 /*
@@ -39,7 +38,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${[...supabase, ...api, ...firebase].join(" ")}${isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""}`.trim(),
+  `connect-src 'self' ${[...api, ...firebase].join(" ")}${isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""}`.trim(),
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "media-src 'self' blob:",

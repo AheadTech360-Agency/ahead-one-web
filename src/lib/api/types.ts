@@ -14,6 +14,8 @@ export type * from "./generated";
  */
 export type KnownErrorCode =
   | "unauthenticated"
+  | "invalid_credentials"
+  | "invalid_code"
   | "mfa_required"
   | "forbidden"
   | "account_disabled"

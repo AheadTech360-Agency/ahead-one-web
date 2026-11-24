@@ -2,51 +2,23 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AuthCard, ConfigMissing, FormError } from "@/components/auth/auth-card";
 import { NewPasswordFields, validateNewPassword } from "@/components/auth/new-password-fields";
-import { isSupabaseConfigured } from "@/lib/env";
-import { getSupabase } from "@/lib/supabase/client";
+import { isApiError } from "@/lib/api/errors";
+import { resetPassword } from "@/lib/api/hooks";
+import { isApiConfigured } from "@/lib/env";
 import { Button } from "@/ui/button";
-import { Spinner } from "@/ui/spinner";
-import { toast } from "@/ui/toaster";
 
-type Phase = "checking" | "ready" | "invalid";
-
-/** Landing page for the recovery email link (PKCE code in the URL). */
+/** Landing page for the emailed reset link (`?token=`). The token is single use and lasts an hour. */
 export function ResetPassword() {
   const router = useRouter();
-  const params = useSearchParams();
-  const code = params.get("code");
-  const [phase, setPhase] = useState<Phase>(isSupabaseConfigured ? "checking" : "invalid");
+  const token = useSearchParams().get("token") ?? "";
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<{ password?: string; confirm?: string; form?: string }>({});
+  const [linkBad, setLinkBad] = useState(token.length === 0);
   const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    const supabase = getSupabase();
-    let cancelled = false;
-    void (async () => {
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          // The client may already have exchanged it on load; fall through to the session check.
-          const { data } = await supabase.auth.getSession();
-          if (!cancelled) setPhase(data.session ? "ready" : "invalid");
-          return;
-        }
-        if (!cancelled) setPhase("ready");
-        return;
-      }
-      const { data } = await supabase.auth.getSession();
-      if (!cancelled) setPhase(data.session ? "ready" : "invalid");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [code]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,36 +26,30 @@ export function ResetPassword() {
     setErrors(v);
     if (v.password || v.confirm) return;
     setPending(true);
-    const { error } = await getSupabase().auth.updateUser({ password });
-    setPending(false);
-    if (error) {
-      setErrors({
-        form:
-          error.code === "same_password"
-            ? "Choose a password you haven't used here before."
-            : error.code === "insufficient_aal"
-              ? "Verify your sign-in code first, then set the new password."
-              : error.message,
-      });
-      if (error.code === "insufficient_aal") router.push("/login/mfa?next=/reset-password");
-      return;
+    try {
+      await resetPassword(token, password);
+      router.replace("/login?reset=1");
+    } catch (err) {
+      setPending(false);
+      if (isApiError(err) && err.code === "validation" && /link/i.test(err.message)) {
+        setLinkBad(true);
+      } else if (isApiError(err) && err.code === "validation") {
+        setErrors({ form: err.message || "Choose a password between 12 and 128 characters." });
+      } else if (isApiError(err) && err.code === "rate_limited") {
+        setErrors({ form: "Too many attempts. Wait a minute and try again." });
+      } else {
+        setErrors({ form: "Couldn't save your password. Check your connection and try again." });
+      }
     }
-    toast.success("Password updated");
-    router.replace("/");
-    router.refresh();
   }
 
   return (
-    <AuthCard title="Choose a new password" description="You'll use it the next time you sign in.">
-      {!isSupabaseConfigured ? (
+    <AuthCard title="Choose a new password" description="You'll be signed out everywhere, then sign in with the new one.">
+      {!isApiConfigured ? (
         <ConfigMissing />
-      ) : phase === "checking" ? (
-        <div className="flex items-center gap-2 py-6 text-13 text-fg-muted">
-          <Spinner /> Checking your reset link
-        </div>
-      ) : phase === "invalid" ? (
+      ) : linkBad ? (
         <div className="flex flex-col gap-4">
-          <FormError>This reset link has expired or was already used.</FormError>
+          <FormError>This reset link has expired or was already used. Links work once and last an hour.</FormError>
           <Button asChild variant="primary" size="lg">
             <Link href="/forgot-password">Send a new link</Link>
           </Button>

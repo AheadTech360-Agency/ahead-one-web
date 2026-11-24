@@ -4,10 +4,13 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { z } from "zod";
-import { AuthCard, ConfigMissing, FormError } from "@/components/auth/auth-card";
-import { isSupabaseConfigured } from "@/lib/env";
+import { AuthCard, ConfigMissing, FormError, FormNotice } from "@/components/auth/auth-card";
+import { TwoFactorStep } from "@/components/auth/two-factor-step";
+import { isApiError } from "@/lib/api/errors";
+import { isApiConfigured } from "@/lib/env";
+import { signIn } from "@/lib/auth/client";
+import type { TwoFactorChallenge } from "@/lib/auth/types";
 import { safeNext } from "@/lib/safe-next";
-import { getSupabase } from "@/lib/supabase/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
@@ -18,15 +21,29 @@ const schema = z.object({
   password: z.string().min(1, "Enter your password."),
 });
 
-/** Sign in, then step up to TOTP when the account has a verified factor. */
+const REASONS: Record<string, string> = {
+  mfa: "For security, sign in again to confirm your code.",
+  expired: "Your session ended. Sign in again to pick up where you left off.",
+  disabled: "This account has been disabled. Contact a workspace admin.",
+};
+
+/** Sign in with email and password, then the emailed code when the account needs one. */
 export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
+  const reason = params.get("reason");
+  const justReset = params.get("reset") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string; form?: string }>({});
   const [pending, setPending] = useState(false);
+  const [challenge, setChallenge] = useState<TwoFactorChallenge | null>(null);
+
+  function finish() {
+    router.replace(next);
+    router.refresh();
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -39,49 +56,55 @@ export function LoginForm() {
     setErrors({});
     setPending(true);
     try {
-      const supabase = getSupabase();
-      const { error } = await supabase.auth.signInWithPassword(parsed.data);
-      if (error) {
-        setErrors({
-          form:
-            error.code === "invalid_credentials"
-              ? "That email and password don't match. Check both and try again."
-              : error.code === "email_not_confirmed"
-                ? "This email isn't confirmed yet. Use the link in your invite email."
-                : error.message,
-        });
+      const result = await signIn(parsed.data.email, parsed.data.password);
+      if (result.kind === "two_factor") {
+        setChallenge(result.challenge);
+        setPassword("");
+        setPending(false);
         return;
       }
-      const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (data?.currentLevel === "aal1" && data.nextLevel === "aal2") {
-        router.replace(`/login/mfa?next=${encodeURIComponent(next)}`);
-      } else {
-        router.replace(next);
-        router.refresh();
-      }
-    } catch {
-      setErrors({ form: "Can't reach the sign-in service. Check your connection and try again." });
-    } finally {
+      finish();
+    } catch (err) {
       setPending(false);
+      if (isApiError(err) && err.code === "invalid_credentials") {
+        setErrors({ form: "That email and password don't match. Check both and try again, or reset your password." });
+      } else if (isApiError(err) && err.code === "account_disabled") {
+        setErrors({ form: "This account has been disabled. Contact a workspace admin." });
+      } else if (isApiError(err) && err.code === "rate_limited") {
+        setErrors({ form: "Too many sign-in attempts. Wait a minute, then try again." });
+      } else if (isApiError(err) && (err.code === "network" || err.code === "unavailable")) {
+        setErrors({ form: "Can't reach the sign-in service. Check your connection and try again." });
+      } else {
+        setErrors({ form: "Couldn't sign you in. Try again in a moment." });
+      }
     }
   }
+
+  if (challenge) {
+    return (
+      <AuthCard title="Check your email" description="One more step to confirm it's you.">
+        <TwoFactorStep challenge={challenge} onVerified={finish} onBack={() => setChallenge(null)} />
+      </AuthCard>
+    );
+  }
+
+  const banner = reason ? REASONS[reason] : justReset ? "Password updated. Sign in with your new password." : undefined;
 
   return (
     <AuthCard
       title="Sign in"
       description="Use the email and password from your invite."
-      footer={
-        <>
-          New to the team? Ask an admin for an invite.
-        </>
-      }
+      footer={<>New to the team? Ask an admin for an invite.</>}
     >
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-        {!isSupabaseConfigured && <ConfigMissing />}
+        {!isApiConfigured && <ConfigMissing />}
+        {banner &&
+          (reason === "disabled" ? <FormError>{banner}</FormError> : <FormNotice>{banner}</FormNotice>)}
         <Field label="Email" error={errors.email}>
           <Input
             type="email"
-            autoComplete="email"
+            name="email"
+            autoComplete="username"
             autoFocus
             size="lg"
             value={email}
@@ -93,6 +116,7 @@ export function LoginForm() {
         </Field>
         <Field label="Password" error={errors.password}>
           <PasswordInput
+            name="password"
             autoComplete="current-password"
             size="lg"
             value={password}
@@ -109,7 +133,7 @@ export function LoginForm() {
           Forgot password?
         </Link>
         <FormError>{errors.form}</FormError>
-        <Button type="submit" variant="primary" size="lg" loading={pending} disabled={!isSupabaseConfigured}>
+        <Button type="submit" variant="primary" size="lg" loading={pending} disabled={!isApiConfigured}>
           Sign in
         </Button>
       </form>

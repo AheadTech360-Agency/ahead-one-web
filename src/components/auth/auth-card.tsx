@@ -44,10 +44,5 @@ export function FormNotice({ children }: { children: React.ReactNode }) {
 }
 
 export function ConfigMissing() {
-  return (
-    <FormError>
-      Sign-in isn&apos;t configured for this environment. Set NEXT_PUBLIC_SUPABASE_URL and
-      NEXT_PUBLIC_SUPABASE_ANON_KEY.
-    </FormError>
-  );
+  return <FormError>Sign-in isn&apos;t configured for this environment. Set NEXT_PUBLIC_API_URL and restart the app.</FormError>;
 }

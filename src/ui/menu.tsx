@@ -58,8 +58,14 @@ export function DropdownMenuItem({
       )}
       {...props}
     >
-      {children}
-      {shortcut && <span className="ml-auto pl-4 text-12 text-fg-faint">{shortcut}</span>}
+      {shortcut ? (
+        <>
+          {children}
+          <span className="ml-auto pl-4 text-12 text-fg-faint">{shortcut}</span>
+        </>
+      ) : (
+        children
+      )}
     </MenuPrimitive.Item>
   );
 }

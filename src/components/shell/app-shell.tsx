@@ -1,6 +1,6 @@
 "use client";
 
-import { isApiConfigured, isSupabaseConfigured } from "@/lib/env";
+import { isApiConfigured } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { WorkspaceProvider } from "@/lib/workspace";
 import { Sheet, SheetContent } from "@/ui/sheet";
@@ -47,12 +47,10 @@ function Frame({ children }: { children: React.ReactNode }) {
             sidebarCollapsed && "md:ml-2",
           )}
         >
-          {(!isSupabaseConfigured || !isApiConfigured) && process.env.NODE_ENV !== "production" && (
+          {!isApiConfigured && process.env.NODE_ENV !== "production" && (
             <p className="border-b border-border-subtle bg-warning-subtle px-4 py-2 text-12 text-warning-text">
-              Local setup: {!isSupabaseConfigured && "Supabase keys"}
-              {!isSupabaseConfigured && !isApiConfigured && " and "}
-              {!isApiConfigured && "the API address"} aren&apos;t set. Copy web/.env.example to
-              web/.env.local and restart the dev server.
+              Local setup: the API address isn&apos;t set. Copy web/.env.example to web/.env.local and
+              restart the dev server.
             </p>
           )}
           {children}
