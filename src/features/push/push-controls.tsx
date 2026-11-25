@@ -1,8 +1,10 @@
 "use client";
 
 import { BellRing, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { errorMessage, isApiError } from "@/lib/api/client";
+import { qk } from "@/lib/api/keys";
 import { Button } from "@/ui/button";
 import { Switch } from "@/ui/checkbox";
 import { IconButton } from "@/ui/icon-button";
@@ -11,6 +13,8 @@ import { disablePush, dismissPushPrompt, enablePush, refreshPushToken, usePushSt
 
 function useToggle() {
   const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const refreshStatus = () => qc.invalidateQueries({ queryKey: qk.notifications.channels() });
   async function turnOn() {
     setBusy(true);
     try {
@@ -26,6 +30,7 @@ function useToggle() {
       });
     } finally {
       setBusy(false);
+      void refreshStatus();
     }
   }
   async function turnOff() {
@@ -35,6 +40,7 @@ function useToggle() {
       toast.success("Browser notifications are off");
     } finally {
       setBusy(false);
+      void refreshStatus();
     }
   }
   return { busy, turnOn, turnOff };

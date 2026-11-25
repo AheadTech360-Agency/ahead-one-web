@@ -44,7 +44,8 @@ self.addEventListener("push", (event) => {
   const link = appUrl(data.link || (payload.fcmOptions && payload.fcmOptions.link) || n.click_action);
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
-      if (windows.some((w) => w.focused && w.visibilityState === "visible")) return;
+      // The open app shows its own toast for normal notifications; test pushes carry always_show.
+      if (data.always_show !== "1" && windows.some((w) => w.focused && w.visibilityState === "visible")) return;
       return self.registration.showNotification(n.title || "AheadOne", {
         body: n.body || "",
         tag: link,
