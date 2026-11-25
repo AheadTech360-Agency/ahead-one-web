@@ -6,12 +6,14 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarStack } from "@/ui/avatar";
 import { PriorityBadge } from "@/ui/badge";
 import { DUE_TONE_CLASS, absoluteTime, dueTone, formatDue, relativeTime } from "../lib/dates";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useTaskLink } from "../lib/use-task-filters";
 import { activitySentence } from "./activity";
 
 /** A task from My Tasks or the dashboard: status dot, title, where it lives, when it's due. */
 export function MyTaskRow({ item, card = false }: { item: MyTask; card?: boolean }) {
   const link = useTaskLink();
+  const pf = usePrefetchers();
   const t = item.task;
   const tone = dueTone(t);
   return (
@@ -19,6 +21,7 @@ export function MyTaskRow({ item, card = false }: { item: MyTask; card?: boolean
       <Link
         href={link.href(t.id)}
         scroll={false}
+        {...intent(() => pf.task(t.id))}
         className={cn(
           "group/r flex min-h-12 items-center gap-3 px-3 py-2 outline-none transition-colors duration-[var(--dur-fast)]",
           "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",

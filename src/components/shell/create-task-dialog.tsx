@@ -112,7 +112,7 @@ function CreateTaskForm({ onDone }: { onDone: () => void }) {
           label="List"
           error={errors.list}
           hint={
-            tree.isError
+            (tree.isError && tree.data === undefined)
               ? "Lists couldn't load. Check your connection and reopen this dialog."
               : listOptions.length === 0 && !tree.isPending
                 ? "No lists yet. Create a project from the sidebar first."

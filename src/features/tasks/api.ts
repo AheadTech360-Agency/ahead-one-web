@@ -10,15 +10,18 @@
  */
 
 import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
   useInfiniteQuery,
   useMutation,
   useQueries,
   useQuery,
   useQueryClient,
-  type InfiniteData,
   type QueryClient,
 } from "@tanstack/react-query";
 import { api, errorMessage } from "@/lib/api/client";
+import { STALE } from "@/lib/cache/stale";
 import { ALLOWED_MIME, checkFile, mimeForFile } from "@/lib/files/limits";
 import { qk } from "@/lib/api/keys";
 import type {
@@ -49,6 +52,7 @@ import type {
   UserSummary,
 } from "@/lib/api/types";
 import { toast } from "@/ui/toaster";
+import { appendComment, mapPages, moveTaskInPages, settleComment, type CommentPages, type TaskPages } from "./lib/optimistic";
 
 /* ---------- Keys ---------- */
 
@@ -75,12 +79,16 @@ export const TASK_PAGE = 200;
 
 /* ---------- Projects, lists, statuses ---------- */
 
-export function useProject(id: string | undefined) {
-  return useQuery({
+export const projectOptions = (id: string | undefined) =>
+  queryOptions({
     queryKey: tk.project(id ?? ""),
     queryFn: ({ signal }) => api<Project>(`/v1/projects/${id}`, { signal }),
     enabled: Boolean(id),
+    staleTime: STALE.SEMI,
   });
+
+export function useProject(id: string | undefined) {
+  return useQuery(projectOptions(id));
 }
 
 export function useUpdateProject(id: string) {
@@ -111,12 +119,16 @@ export function useSetProjectArchived(id: string) {
   });
 }
 
-export function useProjectMembers(id: string | undefined) {
-  return useQuery({
+export const projectMembersOptions = (id: string | undefined) =>
+  queryOptions({
     queryKey: tk.projectMembers(id ?? ""),
     queryFn: ({ signal }) => api<ProjectMember[]>(`/v1/projects/${id}/members`, { signal }),
     enabled: Boolean(id),
+    staleTime: STALE.PEOPLE,
   });
+
+export function useProjectMembers(id: string | undefined) {
+  return useQuery(projectMembersOptions(id));
 }
 
 export function useSetProjectMember(projectId: string) {
@@ -157,12 +169,16 @@ export function useRemoveProjectMember(projectId: string) {
   });
 }
 
-export function useProjectLists(projectId: string | undefined) {
-  return useQuery({
+export const projectListsOptions = (projectId: string | undefined) =>
+  queryOptions({
     queryKey: tk.lists(projectId ?? ""),
     queryFn: ({ signal }) => api<List[]>(`/v1/projects/${projectId}/lists`, { signal }),
     enabled: Boolean(projectId),
+    staleTime: STALE.SEMI,
   });
+
+export function useProjectLists(projectId: string | undefined) {
+  return useQuery(projectListsOptions(projectId));
 }
 
 function invalidateTree(qc: QueryClient) {
@@ -224,27 +240,27 @@ export function useSetListArchived(projectId: string) {
   });
 }
 
-export function useStatuses(listId: string | undefined) {
-  return useQuery({
+export const statusesOptions = (listId: string | undefined) =>
+  queryOptions({
     queryKey: tk.statuses(listId ?? ""),
     queryFn: ({ signal }) => api<ListStatus[]>(`/v1/lists/${listId}/statuses`, { signal }),
     enabled: Boolean(listId),
-    staleTime: 5 * 60_000,
+    staleTime: STALE.STABLE,
+    refetchOnWindowFocus: false,
   });
+
+export function useStatuses(listId: string | undefined) {
+  return useQuery(statusesOptions(listId));
 }
 
 /** Statuses for several lists at once (project-level views). */
 export function useStatusesFor(listIds: string[]) {
   return useQueries({
-    queries: listIds.map((id) => ({
-      queryKey: tk.statuses(id),
-      queryFn: ({ signal }: { signal: AbortSignal }) => api<ListStatus[]>(`/v1/lists/${id}/statuses`, { signal }),
-      staleTime: 5 * 60_000,
-    })),
+    queries: listIds.map((id) => statusesOptions(id)),
     combine: (results) => ({
       data: results.flatMap((r) => r.data ?? []),
       isPending: results.some((r) => r.isPending),
-      isError: results.some((r) => r.isError),
+      isError: results.some((r) => r.isError && r.data === undefined),
       error: results.find((r) => r.error)?.error,
       refetch: () => results.forEach((r) => void r.refetch()),
     }),
@@ -329,8 +345,8 @@ function scopePath(scope: TaskScope) {
   return scope.kind === "list" ? `/v1/lists/${scope.id}/tasks` : `/v1/projects/${scope.id}/tasks`;
 }
 
-export function useTasks(scope: TaskScope | undefined, filters: TaskFilters, enabled = true) {
-  return useInfiniteQuery({
+export const tasksOptions = (scope: TaskScope | undefined, filters: TaskFilters, enabled = true) =>
+  infiniteQueryOptions({
     queryKey: tk.tasks(scope ?? { kind: "list", id: "" }, filters),
     queryFn: ({ signal, pageParam }) =>
       api<Page<Task>>(scopePath(scope!), {
@@ -340,17 +356,23 @@ export function useTasks(scope: TaskScope | undefined, filters: TaskFilters, ena
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled: Boolean(scope?.id) && enabled,
+    staleTime: STALE.LIVE,
+    // A filter change keeps the rows on screen until the new ones land, but only within the same
+    // list or project: another scope must never show this one's tasks.
+    placeholderData: (prev, prevQuery) => {
+      const k = prevQuery?.queryKey;
+      return k && k[1] === (scope?.kind ?? "list") && k[2] === (scope?.id ?? "") ? prev : undefined;
+    },
   });
+
+export function useTasks(scope: TaskScope | undefined, filters: TaskFilters, enabled = true) {
+  return useInfiniteQuery(tasksOptions(scope, filters, enabled));
 }
 
-type TaskPages = InfiniteData<Page<Task>, string | undefined>;
 
 /** Apply `fn` to every cached task collection page. */
 function mapTaskCaches(qc: QueryClient, fn: (items: Task[]) => Task[]) {
-  qc.setQueriesData<TaskPages>({ queryKey: tk.tasksAll }, (data) => {
-    if (!data?.pages) return data;
-    return { ...data, pages: data.pages.map((p) => ({ ...p, items: fn(p.items) })) };
-  });
+  qc.setQueriesData<TaskPages>({ queryKey: tk.tasksAll }, (data) => mapPages(data, fn));
 }
 
 function snapshot(qc: QueryClient) {
@@ -381,29 +403,7 @@ function patchTaskEverywhere(qc: QueryClient, id: string, patch: (t: Task) => Ta
 
 /** Move a task inside cached collections next to its new neighbours (board reorder). */
 function moveInCaches(qc: QueryClient, id: string, afterId: string | null | undefined, beforeId: string | null | undefined) {
-  qc.setQueriesData<TaskPages>({ queryKey: tk.tasksAll }, (data) => {
-    if (!data?.pages) return data;
-    let moving: Task | undefined;
-    const pages = data.pages.map((p) => ({
-      ...p,
-      items: p.items.filter((t) => {
-        if (t.id === id) moving = t;
-        return t.id !== id;
-      }),
-    }));
-    if (!moving) return data;
-    const anchor = afterId ?? beforeId;
-    for (const p of pages) {
-      const i = anchor ? p.items.findIndex((t) => t.id === anchor) : -1;
-      if (i >= 0) {
-        p.items.splice(afterId ? i + 1 : i, 0, moving);
-        return { ...data, pages };
-      }
-    }
-    if (afterId === null && pages[0]) pages[0].items.unshift(moving);
-    else pages[pages.length - 1]?.items.push(moving);
-    return { ...data, pages };
-  });
+  qc.setQueriesData<TaskPages>({ queryKey: tk.tasksAll }, (data) => moveTaskInPages(data, id, afterId, beforeId));
 }
 
 export type TaskUpdateVars = {
@@ -546,12 +546,16 @@ export function useDeleteTask() {
 
 /* ---------- Task detail ---------- */
 
-export function useTask(id: string | undefined) {
-  return useQuery({
+export const taskOptions = (id: string | undefined) =>
+  queryOptions({
     queryKey: tk.task(id ?? ""),
     queryFn: ({ signal }) => api<TaskDetail>(`/v1/tasks/${id}`, { signal }),
     enabled: Boolean(id),
+    staleTime: STALE.LIVE,
   });
+
+export function useTask(id: string | undefined) {
+  return useQuery(taskOptions(id));
 }
 
 /** Debounced description save. The editor keeps its own state; this only persists it. */
@@ -569,18 +573,20 @@ export function useSaveDescription(task: Task | undefined) {
 
 /* ---------- Comments and activity ---------- */
 
-export function useComments(taskId: string | undefined) {
-  return useInfiniteQuery({
+export const commentsOptions = (taskId: string | undefined) =>
+  infiniteQueryOptions({
     queryKey: tk.comments(taskId ?? ""),
     queryFn: ({ signal, pageParam }) =>
       api<Page<Comment>>(`/v1/tasks/${taskId}/comments`, { signal, query: { cursor: pageParam, limit: 100 } }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled: Boolean(taskId),
+    staleTime: STALE.LIVE,
   });
-}
 
-type CommentPages = InfiniteData<Page<Comment>, string | undefined>;
+export function useComments(taskId: string | undefined) {
+  return useInfiniteQuery(commentsOptions(taskId));
+}
 
 export function useCreateComment(taskId: string, me: UserSummary | undefined) {
   const qc = useQueryClient();
@@ -606,19 +612,11 @@ export function useCreateComment(taskId: string, me: UserSummary | undefined) {
       toast.error("Couldn't post your comment", { description: `${errorMessage(e)} Your text is still in the box.` });
     },
     onSuccess: (c, _v, ctx) => {
-      qc.setQueryData<CommentPages>(key, (d) =>
-        d ? { ...d, pages: d.pages.map((p) => ({ ...p, items: p.items.map((x) => (x.id === ctx?.tempId ? c : x)) })) } : d,
-      );
+      qc.setQueryData<CommentPages>(key, (d) => settleComment(d, ctx?.tempId, c));
       patchTaskEverywhere(qc, taskId, (t) => ({ ...t, comment_count: t.comment_count + 1 }));
       void qc.invalidateQueries({ queryKey: tk.activity(taskId) });
     },
   });
-}
-
-function appendComment(d: CommentPages | undefined, c: Comment): CommentPages {
-  if (!d?.pages.length) return { pages: [{ items: [c], next_cursor: null }], pageParams: [undefined] };
-  const pages = d.pages.map((p, i) => (i === d.pages.length - 1 ? { ...p, items: [...p.items, c] } : p));
-  return { ...d, pages };
 }
 
 export function useEditComment(taskId: string) {
@@ -682,6 +680,7 @@ export function useActivity(taskId: string | undefined, enabled = true) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled: Boolean(taskId) && enabled,
+    staleTime: 30_000,
   });
 }
 
@@ -753,20 +752,29 @@ export function useDeleteAttachment(taskId: string) {
 
 export type MyTasksBucket = "today" | "upcoming" | "overdue" | "all";
 
-export function useMyTasks(ws: string | undefined, bucket: MyTasksBucket) {
-  return useQuery({
+export const myTasksOptions = (ws: string | undefined, bucket: MyTasksBucket) =>
+  queryOptions({
     queryKey: qk.workspace(ws ?? "").myTasks(bucket),
     queryFn: ({ signal }) => api<MyTask[]>(`/v1/workspaces/${ws}/my-tasks`, { signal, query: { bucket } }),
     enabled: Boolean(ws),
+    staleTime: STALE.LIVE,
+    placeholderData: keepPreviousData,
   });
+
+export function useMyTasks(ws: string | undefined, bucket: MyTasksBucket) {
+  return useQuery(myTasksOptions(ws, bucket));
 }
 
-export function useDashboard(ws: string | undefined) {
-  return useQuery({
+export const dashboardOptions = (ws: string | undefined) =>
+  queryOptions({
     queryKey: qk.workspace(ws ?? "").dashboard(),
     queryFn: ({ signal }) => api<Dashboard>(`/v1/workspaces/${ws}/dashboard`, { signal }),
     enabled: Boolean(ws),
+    staleTime: STALE.DASHBOARD,
   });
+
+export function useDashboard(ws: string | undefined) {
+  return useQuery(dashboardOptions(ws));
 }
 
 /** Global search. `q` must already be trimmed and debounced; 2 to 100 characters. */

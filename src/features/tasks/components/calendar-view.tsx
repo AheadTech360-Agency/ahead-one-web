@@ -39,6 +39,7 @@ import { useUpdateTask } from "../api";
 import { dayKey, formatDue, moveDueToDay } from "../lib/dates";
 import { isDoneCategory } from "../lib/groups";
 import type { ScopeData } from "../lib/use-scope-data";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useTaskLink } from "../lib/use-task-filters";
 
 /*
@@ -302,6 +303,7 @@ function DraggableCard({ task, data, canMove }: { task: Task; data: ScopeData; c
 
 function Card({ task, data, overlay }: { task: Task; data: ScopeData; overlay?: boolean }) {
   const link = useTaskLink();
+  const pf = usePrefetchers();
   const status = data.statusById.get(task.status_id);
   const done = isDoneCategory(status?.category) || Boolean(task.completed_at);
   return (
@@ -320,6 +322,7 @@ function Card({ task, data, overlay }: { task: Task; data: ScopeData; overlay?: 
         href={link.href(task.id)}
         scroll={false}
         tabIndex={-1}
+        {...intent(() => pf.task(task.id))}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn("min-w-0 flex-1 truncate hover:underline", done ? "text-fg-muted line-through" : "text-fg")}
       >

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useConversations } from "@/lib/api/hooks";
 import type { Conversation } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
 import { CountBadge } from "@/ui/badge";
@@ -22,6 +23,7 @@ const rowBase = cn(sbRow, "gap-2 px-2");
 
 function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: string; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const pf = usePrefetchers();
   const href = `/messages/${c.id}`;
   const active = pathname === href;
   const partner = c.kind === "dm" ? dmPartner(c, meId) : undefined;
@@ -29,6 +31,7 @@ function ConversationLink({ c, meId, onNavigate }: { c: Conversation; meId?: str
   return (
     <Link
       href={href}
+      {...intent(() => pf.conversation(c.id))}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       aria-label={`${conversationLabel(c, meId)}${unread ? `, ${c.unread_count} unread` : ""}`}

@@ -74,6 +74,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // The e2e suite builds into its own folder so it never fights a dev server or build using .next.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // Busts the persisted query cache on every deploy (see src/lib/cache). The commit sha is not a secret.
+  env: { NEXT_PUBLIC_APP_BUILD: (process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 8) || "local" },
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,

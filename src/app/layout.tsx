@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
+import { preconnect } from "react-dom";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -41,6 +42,12 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Open the connection to the API (DNS, TCP, TLS) while the page's JavaScript is still loading.
+  try {
+    if (process.env.NEXT_PUBLIC_API_URL) preconnect(new URL(process.env.NEXT_PUBLIC_API_URL).origin, { crossOrigin: "anonymous" });
+  } catch {
+    // A malformed address is reported elsewhere; a missing hint costs nothing.
+  }
   return (
     <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable} h-full`} suppressHydrationWarning>
       <body className="h-full">

@@ -10,8 +10,8 @@ import { useWorkspace } from "@/lib/workspace";
 import { ConfirmDialog } from "@/ui/dialog";
 import { toast } from "@/ui/toaster";
 import { useAttachToTask, useInvalidateFiles, saveRecording } from "../files/api";
-import { RecorderDialog } from "./dialog";
-import { RecorderHud } from "./hud";
+import dynamic from "next/dynamic";
+import { useEverTrue } from "@/lib/hooks/use-ever-true";
 import { CaptureError, CaptureSession, type CaptureOptions } from "./session";
 
 /** Where a finished recording should go. */
@@ -128,6 +128,10 @@ function useSystemAudioLikely() {
 
 const LIBRARY: RecorderTarget = { kind: "library" };
 
+// The dialog and the floating controls load the first time a recording starts.
+const RecorderDialog = dynamic(() => import("./dialog").then((m) => m.RecorderDialog), { ssr: false });
+const RecorderHud = dynamic(() => import("./hud").then((m) => m.RecorderHud), { ssr: false });
+
 export function RecorderProvider({ children }: { children: React.ReactNode }) {
   const { workspaceId } = useWorkspace();
   const invalidateFiles = useInvalidateFiles();
@@ -136,6 +140,7 @@ export function RecorderProvider({ children }: { children: React.ReactNode }) {
   const systemAudioLikely = useSystemAudioLikely();
 
   const [phase, setPhase] = useState<Phase>("closed");
+  const showUi = useEverTrue(phase !== "closed");
   const [target, setTarget] = useState<RecorderTarget>(LIBRARY);
   const [options, setOptions] = useState<CaptureOptions>({ voice: false, systemAudio: false });
   const [error, setError] = useState<string | null>(null);
@@ -390,8 +395,8 @@ export function RecorderProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      <RecorderDialog />
-      <RecorderHud />
+      {showUi && <RecorderDialog />}
+      {showUi && <RecorderHud />}
       <ConfirmDialog
         open={confirmDiscard}
         onOpenChange={setConfirmDiscard}

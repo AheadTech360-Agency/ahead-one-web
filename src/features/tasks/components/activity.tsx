@@ -153,7 +153,7 @@ export function ActivityList({ taskId, people }: { taskId: string; people: UserS
       </div>
     );
   }
-  if (q.isError) {
+  if ((q.isError && q.data === undefined)) {
     return (
       <EmptyState
         compact

@@ -64,3 +64,12 @@ Env knobs: `E2E_API_BIN` (default `D:/ahead-one/.target-test/debug/tasks-api.exe
 `e2e/recordings.spec.ts` drives the screen recorder with Chromium's fake capture flags. Saving and playback need the API's object storage (R2) configured and reachable from the browser (bucket CORS); when it is not, that part skips with a note.
 
 CI runs the `e2e` job only when the repository variable `E2E_ENABLED` is `true`. It needs the secret `API_REPO_TOKEN` (a token that can read `AheadTech360-Agency/ahead-one-api`), builds the API against a Postgres 16 service and uploads `playwright-report` on failure.
+
+## Performance and caching
+
+- Freshness is per resource in `src/lib/cache/stale.ts` (`STALE.*`); hooks export `xOptions()` factories that the prefetchers in `src/lib/api/prefetch.ts` reuse, so a prefetch is a cache hit later. New read hooks should do the same.
+- The TanStack Query cache is persisted to IndexedDB (`src/lib/cache`): only keys on the allowlist in `policy.ts` (`isPersistableKey`), never tokens or signed URLs, owned by one user, wiped on sign-in, sign-out and a user change, expired after 24 h and busted by `CACHE_SCHEMA` or a new deploy. Add a key to the allowlist (and a test) when a new query should survive a reload. Bump `CACHE_SCHEMA` when a cached response shape changes.
+- Screens treat an error over cached data as a background failure: use `q.isError && q.data === undefined` for the inline error state. `QueryCache.onError` raises the single de-duplicated "Couldn't refresh" toast (`RefreshFailureNotice`).
+- Heavy, rarely used code loads on demand (`next/dynamic`): the rich-text editor, the task slide-over, the command palette and the recorder UI.
+- Request timing: on in `next dev`; in production set `localStorage["ahead-one.perf"] = "1"` and reload, then use `__aheadPerf.table()` in the console.
+- `vercel.json` pins functions (the `/api/auth` BFF) to `sin1`, next to the Railway API.

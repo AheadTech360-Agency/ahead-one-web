@@ -31,6 +31,7 @@ import { useCreateTask, useUpdateTask } from "../api";
 import { DUE_TONE_CLASS, dueTone, formatDue } from "../lib/dates";
 import { groupOfTask, isDoneCategory, type StatusGroup } from "../lib/groups";
 import type { ScopeData } from "../lib/use-scope-data";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useTaskLink } from "../lib/use-task-filters";
 
 /*
@@ -276,6 +277,7 @@ function SortableCard({ task, data }: { task: Task; data: ScopeData }) {
 
 function CardBody({ task, data, overlay }: { task: Task; data: ScopeData; overlay?: boolean }) {
   const link = useTaskLink();
+  const pf = usePrefetchers();
   const status = data.statusById.get(task.status_id);
   const done = isDoneCategory(status?.category) || Boolean(task.completed_at);
   const tone = dueTone(task);
@@ -294,6 +296,7 @@ function CardBody({ task, data, overlay }: { task: Task; data: ScopeData; overla
         href={link.href(task.id)}
         scroll={false}
         tabIndex={-1}
+        {...intent(() => pf.task(task.id))}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
           "line-clamp-3 font-medium leading-5 decoration-fg-faint hover:underline",

@@ -60,7 +60,7 @@ export function ProjectSettingsScreen() {
   const { projectId } = useParams<{ projectId: string }>();
   const project = useProject(projectId);
 
-  if (project.isError) {
+  if ((project.isError && project.data === undefined)) {
     const gone = isApiError(project.error) && project.error.isNotFound;
     return (
       <div className="mx-auto max-w-[1152px] px-4 py-6 sm:px-6 md:px-8">
@@ -268,7 +268,7 @@ function ListsPanel({ projectId, editable }: { projectId: string; editable: bool
   );
 
   if (lists.isPending) return <PanelSkeleton rows={3} />;
-  if (lists.isError) return <PanelError error={lists.error} retry={() => void lists.refetch()} />;
+  if ((lists.isError && lists.data === undefined)) return <PanelError error={lists.error} retry={() => void lists.refetch()} />;
 
   const active = lists.data.filter((l) => !l.archived_at);
   const archived = lists.data.filter((l) => l.archived_at);
@@ -425,7 +425,7 @@ function StatusesPanel({ projectId, editable }: { projectId: string; editable: b
   const current = listId && active.some((l) => l.id === listId) ? listId : active[0]?.id;
 
   if (lists.isPending) return <PanelSkeleton rows={4} />;
-  if (lists.isError) return <PanelError error={lists.error} retry={() => void lists.refetch()} />;
+  if ((lists.isError && lists.data === undefined)) return <PanelError error={lists.error} retry={() => void lists.refetch()} />;
   if (!current) return <p className="px-2 py-3 text-13 text-fg-muted">Add a list first; each list has its own statuses.</p>;
 
   return (
@@ -459,7 +459,7 @@ function StatusEditor({ listId, editable }: { listId: string; editable: boolean 
   );
 
   if (statuses.isPending) return <PanelSkeleton rows={4} />;
-  if (statuses.isError) return <PanelError error={statuses.error} retry={() => void statuses.refetch()} />;
+  if ((statuses.isError && statuses.data === undefined)) return <PanelError error={statuses.error} retry={() => void statuses.refetch()} />;
   const rows = statuses.data;
 
   function onDragEnd(e: DragEndEvent) {
@@ -706,7 +706,7 @@ function MembersPanel({ project, editable }: { project: Project; editable: boole
   const candidates = (workspace.data ?? []).filter((m) => !inProject.has(m.user.id) && !roleAtLeast(m.role, "management")).map((m) => m.user);
 
   if (members.isPending) return <PanelSkeleton rows={4} />;
-  if (members.isError) return <PanelError error={members.error} retry={() => void members.refetch()} />;
+  if ((members.isError && members.data === undefined)) return <PanelError error={members.error} retry={() => void members.refetch()} />;
 
   const rows = [...members.data].sort((a, b) => PERMS.indexOf(b.permission) - PERMS.indexOf(a.permission) || a.user.full_name.localeCompare(b.user.full_name));
 

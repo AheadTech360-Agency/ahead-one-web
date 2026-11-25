@@ -1,7 +1,8 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiRequestError } from "@/lib/api/client";
+import { STALE } from "@/lib/cache/stale";
 import { chatKeys } from "@/lib/api/keys";
 import { mimeForFile } from "@/lib/files/limits";
 import { recordingMetaOf } from "@/lib/files/recording-meta";
@@ -24,12 +25,17 @@ export const PAGE_SIZE = 50;
 
 /* ---------- Conversations ---------- */
 
-export function useConversation(id: string | undefined) {
-  return useQuery({
+export const conversationOptions = (id: string | undefined) =>
+  queryOptions({
     queryKey: chatKeys.conversation(id ?? ""),
     queryFn: ({ signal }) => api<Conversation>(`/v1/conversations/${id}`, { signal }),
     enabled: Boolean(id),
+    staleTime: STALE.REALTIME,
+    refetchOnWindowFocus: false,
   });
+
+export function useConversation(id: string | undefined) {
+  return useQuery(conversationOptions(id));
 }
 
 export function useBrowseChannels(ws: string | undefined, enabled: boolean) {
@@ -45,6 +51,7 @@ export function useChannelMembers(id: string | undefined, enabled = true) {
     queryKey: chatKeys.members(id ?? ""),
     queryFn: ({ signal }) => api<UserSummary[]>(`/v1/conversations/${id}/members`, { signal }),
     enabled: Boolean(id) && enabled,
+    staleTime: STALE.STABLE,
   });
 }
 
@@ -121,8 +128,8 @@ export function useRemoveChannelMember(id: string) {
 
 /* ---------- Messages ---------- */
 
-export function useMessages(id: string, enabled = true) {
-  return useInfiniteQuery({
+export const messagesOptions = (id: string, enabled = true) =>
+  infiniteQueryOptions({
     queryKey: chatKeys.messages(id),
     queryFn: ({ signal, pageParam }) =>
       api<Page<Message>>(`/v1/conversations/${id}/messages`, {
@@ -134,16 +141,24 @@ export function useMessages(id: string, enabled = true) {
     enabled,
     // Live updates arrive over the socket; refetching every page on focus is wasted work.
     refetchOnWindowFocus: false,
-    staleTime: 5 * 60_000,
+    staleTime: STALE.REALTIME,
   });
+
+export function useMessages(id: string, enabled = true) {
+  return useInfiniteQuery(messagesOptions(id, enabled));
 }
 
-export function useReadStates(id: string, enabled = true) {
-  return useQuery({
+export const readStatesOptions = (id: string, enabled = true) =>
+  queryOptions({
     queryKey: chatKeys.readStates(id),
     queryFn: ({ signal }) => api<ReadState[]>(`/v1/conversations/${id}/read-states`, { signal }),
     enabled,
+    staleTime: STALE.REALTIME,
+    refetchOnWindowFocus: false,
   });
+
+export function useReadStates(id: string, enabled = true) {
+  return useQuery(readStatesOptions(id, enabled));
 }
 
 function tempId() {

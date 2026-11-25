@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiRequestError } from "@/lib/api/client";
 import { chatKeys, qk } from "@/lib/api/keys";
 import type { Attachment, AttachToTask, CreateRecording, DownloadUrl, FileItem, FilesSummary, UploadTicket } from "@/lib/api/types";
@@ -17,6 +17,7 @@ export function useFiles(ws: string | undefined, filters: FileFilters, enabled =
     getNextPageParam: (last) => nextCursor(last, (f) => f.attachment.id, FILE_PAGE) ?? undefined,
     enabled: Boolean(ws) && enabled,
     staleTime: 15_000,
+    placeholderData: keepPreviousData,
   });
 }
 

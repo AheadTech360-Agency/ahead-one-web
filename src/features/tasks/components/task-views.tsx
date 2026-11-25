@@ -38,7 +38,7 @@ export function TaskViews({ data, onCreate }: { data: ScopeData; onCreate?: () =
   }, [setView]);
 
   const loading = tq.isPending || data.statusesPending;
-  const empty = !loading && !tq.isError && tasks.length === 0 && filters.activeCount === 0;
+  const empty = !loading && !(tq.isError && tq.data === undefined) && tasks.length === 0 && filters.activeCount === 0;
 
   return (
     <div className="flex flex-col gap-3">
@@ -55,7 +55,7 @@ export function TaskViews({ data, onCreate }: { data: ScopeData; onCreate?: () =
         </div>
       </div>
 
-      {tq.isError ? (
+      {(tq.isError && tq.data === undefined) ? (
         <EmptyState
           tone="danger"
           icon={CircleAlert}

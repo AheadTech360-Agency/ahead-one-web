@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useShell } from "@/components/shell/shell-context";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { errorMessage, isApiError } from "@/lib/api/client";
 import { Button } from "@/ui/button";
 import { ConfirmDialog } from "@/ui/dialog";
@@ -20,6 +21,7 @@ import { ScreenFrame, ScreenHeader } from "./screen-frame";
 
 export function ProjectScreen() {
   const { projectId } = useParams<{ projectId: string }>();
+  const pf = usePrefetchers();
   const scope = useMemo(() => ({ kind: "project" as const, id: projectId }), [projectId]);
   const data = useScopeData(scope, projectId);
   const lists = useProjectLists(projectId);
@@ -90,6 +92,7 @@ export function ProjectScreen() {
             <Link
               key={l.id}
               href={`/l/${l.id}`}
+              {...intent(() => pf.list(l.id, projectId))}
               className="inline-flex h-7 items-center rounded-full border border-border px-3 text-12 font-medium text-fg-muted transition-colors hover:border-border-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-ring"
             >
               {l.name}

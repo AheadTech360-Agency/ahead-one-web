@@ -88,7 +88,7 @@ export function AuditLogView() {
           <SkeletonRows rows={10} columns={[18, 30, 22, 14]} />
         ) : forbidden ? (
           <EmptyState icon={ShieldAlert} title="Only admins can view the audit log" description="Ask a workspace owner or admin for access." />
-        ) : log.isError || !workspaceId ? (
+        ) : (log.isError && log.data === undefined) || !workspaceId ? (
           <EmptyState
             tone="danger"
             icon={CircleAlert}

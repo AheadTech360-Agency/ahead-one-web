@@ -1,10 +1,17 @@
 "use client";
 
 import { Dialog as DialogPrimitive } from "radix-ui";
+import dynamic from "next/dynamic";
 import { useRef } from "react";
+import { DetailSkeleton } from "@/components/skeletons";
 import { cn } from "@/lib/utils";
 import { useTaskLink } from "../lib/use-task-filters";
-import { TaskDetail } from "./task-detail";
+
+// The task screen (comments, attachments, subtasks, activity) loads when the first task opens.
+const TaskDetail = dynamic(() => import("./task-detail").then((m) => m.TaskDetail), {
+  ssr: false,
+  loading: () => <DetailSkeleton label="Loading task" />,
+});
 
 /**
  * URL-driven task panel: any screen that mounts this opens the task in `?task=<id>`, so the

@@ -20,6 +20,7 @@ import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from "../api";
 import { dateOnlyIso, withTimeIso } from "../lib/dates";
 import { groupOfTask, isDoneCategory, type StatusGroup } from "../lib/groups";
 import type { ScopeData } from "../lib/use-scope-data";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useTaskLink } from "../lib/use-task-filters";
 import { AssigneeControl, DueControl, PriorityControl, StatusGlyph, StatusGlyphControl } from "./task-controls";
 
@@ -323,6 +324,7 @@ function TaskRow({
 }) {
   const { access, statuses, people, scope, lists } = data;
   const link = useTaskLink();
+  const pf = usePrefetchers();
   const canEdit = access.canEdit;
   const status = data.statusById.get(task.status_id);
   const done = isDoneCategory(status?.category) || Boolean(task.completed_at);
@@ -338,6 +340,8 @@ function TaskRow({
       }}
       aria-selected={selected}
       className={cn(
+        // Off-screen rows skip layout and paint (long lists); the browser remembers each row's real height.
+        "[contain-intrinsic-size:auto_40px] [content-visibility:auto]",
         "group/row relative grid min-h-10 grid-cols-[minmax(0,1fr)] items-center border-t border-border-subtle pr-2 outline-none transition-colors duration-[var(--dur-instant)]",
         COLS,
         "hover:bg-surface-sunken focus-visible:bg-surface-sunken",
@@ -377,6 +381,7 @@ function TaskRow({
           <Link
             href={link.href(task.id)}
             scroll={false}
+            {...intent(() => pf.task(task.id))}
             onDoubleClick={(e) => {
               if (!canEdit) return;
               e.preventDefault();
@@ -511,7 +516,7 @@ function SubtaskRows({
       </div>
     );
   }
-  if (q.isError) {
+  if ((q.isError && q.data === undefined)) {
     return (
       <p className="flex h-9 items-center gap-2 border-t border-border-subtle pl-[72px] text-13 text-danger-text">
         Subtasks didn&apos;t load.

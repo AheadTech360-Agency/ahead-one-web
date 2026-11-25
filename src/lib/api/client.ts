@@ -2,6 +2,7 @@
 
 import { getAccessToken, recoverFromUnauthenticated, signOut } from "@/lib/auth/client";
 import { isApiConfigured, env } from "@/lib/env";
+import { recordRequest } from "@/lib/perf";
 import { ApiRequestError, isApiError, errorMessage, parseError } from "./errors";
 
 export { ApiRequestError, isApiError, errorMessage };
@@ -89,17 +90,22 @@ async function send(url: URL, opts: RequestOptions, token: string | null): Promi
   const headers: Record<string, string> = { Accept: "application/json" };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
+  const method = opts.method ?? "GET";
+  const started = performance.now();
   try {
-    return await fetch(url, {
-      method: opts.method ?? "GET",
+    const res = await fetch(url, {
+      method,
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       signal: opts.signal,
       credentials: "omit",
       cache: "no-store",
     });
+    recordRequest(method, url.pathname, started, res.status);
+    return res;
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") throw e;
+    recordRequest(method, url.pathname, started, 0);
     throw new ApiRequestError(0, "network", "Network request failed");
   }
 }

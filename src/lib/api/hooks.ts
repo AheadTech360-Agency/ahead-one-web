@@ -1,24 +1,30 @@
 "use client";
 
 import {
+  keepPreviousData,
+  queryOptions,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { STALE } from "@/lib/cache/stale";
 import { api } from "./client";
 import { qk } from "./keys";
 import type { AcceptInvite, AuditEntry, ChangePassword, Conversation, CreateInvite, ForgotPassword, Invite, InvitePreview, List, MeResponse, Member, Membership, Notification, NotificationChannels, NotificationPrefs, Page, Profile, Project, RegisterInvite, ResetPassword, Role, SetTwoFactor, Space, TestNotificationResult, TreeSpace, UnreadCount, UpdateMe } from "./types";
 
 /* ---------- Me ---------- */
 
-export function useMe(enabled = true) {
-  return useQuery({
+export const meOptions = () =>
+  queryOptions({
     queryKey: qk.me(),
     queryFn: ({ signal }) => api<MeResponse>("/v1/me", { signal }),
-    enabled,
-    staleTime: 60_000,
+    staleTime: STALE.STABLE,
+    refetchOnWindowFocus: false,
   });
+
+export function useMe(enabled = true) {
+  return useQuery({ ...meOptions(), enabled });
 }
 
 export function useUpdateMe() {
@@ -35,7 +41,7 @@ export function useRoles() {
   return useQuery({
     queryKey: qk.roles(),
     queryFn: ({ signal }) => api<Role[]>("/v1/roles", { signal }),
-    staleTime: Infinity,
+    staleTime: STALE.FOREVER,
   });
 }
 
@@ -70,12 +76,16 @@ export function resetPassword(token: string, password: string) {
 
 /* ---------- Members ---------- */
 
-export function useMembers(ws: string | undefined) {
-  return useQuery({
+export const membersOptions = (ws: string | undefined) =>
+  queryOptions({
     queryKey: qk.workspace(ws ?? "").members(),
     queryFn: ({ signal }) => api<Member[]>(`/v1/workspaces/${ws}/members`, { signal }),
     enabled: Boolean(ws),
+    staleTime: STALE.PEOPLE,
   });
+
+export function useMembers(ws: string | undefined) {
+  return useQuery(membersOptions(ws));
 }
 
 export function useUpdateMemberRole(ws: string) {
@@ -167,17 +177,22 @@ export function useAuditLog(ws: string | undefined, filters: { action?: string; 
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled: Boolean(ws),
+    placeholderData: keepPreviousData,
   });
 }
 
 /* ---------- Tree (sidebar) ---------- */
 
-export function useTree(ws: string | undefined) {
-  return useQuery({
+export const treeOptions = (ws: string | undefined) =>
+  queryOptions({
     queryKey: qk.workspace(ws ?? "").tree(false),
     queryFn: ({ signal }) => api<TreeSpace[]>(`/v1/workspaces/${ws}/tree`, { signal }),
     enabled: Boolean(ws),
+    staleTime: STALE.SEMI,
   });
+
+export function useTree(ws: string | undefined) {
+  return useQuery(treeOptions(ws));
 }
 
 export type TreeNodeKind = "space" | "project" | "list";
@@ -235,12 +250,18 @@ export function useCreateNode(ws: string) {
 
 /* ---------- Conversations ---------- */
 
-export function useConversations(ws: string | undefined) {
-  return useQuery({
+export const conversationsOptions = (ws: string | undefined) =>
+  queryOptions({
     queryKey: qk.workspace(ws ?? "").conversations(),
     queryFn: ({ signal }) => api<Conversation[]>(`/v1/workspaces/${ws}/conversations`, { signal }),
     enabled: Boolean(ws),
+    // Kept current by the socket (and refetched after a reconnect); focus refetches would be wasted work.
+    staleTime: STALE.REALTIME,
+    refetchOnWindowFocus: false,
   });
+
+export function useConversations(ws: string | undefined) {
+  return useQuery(conversationsOptions(ws));
 }
 
 /* ---------- Notifications ---------- */
@@ -249,6 +270,7 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: qk.notifications.unreadCount(),
     queryFn: ({ signal }) => api<UnreadCount>("/v1/notifications/unread-count", { signal }),
+    staleTime: 30_000,
     refetchInterval: 60_000,
   });
 }
@@ -264,6 +286,8 @@ export function useNotifications(unreadOnly: boolean, enabled = true) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     enabled,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -287,6 +311,7 @@ export function useNotificationPrefs() {
   return useQuery({
     queryKey: qk.notifications.prefs(),
     queryFn: ({ signal }) => api<NotificationPrefs>("/v1/notification-prefs", { signal }),
+    staleTime: STALE.STABLE,
   });
 }
 

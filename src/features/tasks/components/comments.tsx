@@ -19,7 +19,7 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toaster";
 import { checkAttachment, useComments, useCreateComment, useDeleteComment, useEditComment, useUploadAttachment } from "../api";
 import { absoluteTime, relativeTime } from "../lib/dates";
-import { RichTextEditor, type RichTextEditorHandle } from "../rich-text/editor";
+import { RichTextEditor, type RichTextEditorHandle } from "../rich-text/lazy-editor";
 import { RichTextView } from "../rich-text/rich-text-view";
 import { isEmptyDoc } from "../rich-text/schema";
 
@@ -56,7 +56,7 @@ export function CommentsThread({
             </div>
           ))}
         </div>
-      ) : q.isError ? (
+      ) : (q.isError && q.data === undefined) ? (
         <EmptyState
           compact
           tone="danger"

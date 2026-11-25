@@ -144,7 +144,7 @@ export function FilesScreen() {
       <div aria-live="polite" aria-busy={files.isFetching}>
         {files.isPending ? (
           <FilesSkeleton cards={cards} />
-        ) : files.isError ? (
+        ) : (files.isError && files.data === undefined) ? (
           <EmptyState
             tone="danger"
             icon={CircleAlert}

@@ -44,7 +44,7 @@ function NewDmDialog() {
               </div>
             ))}
           </div>
-        ) : members.isError ? (
+        ) : (members.isError && members.data === undefined) ? (
           <EmptyState
             compact
             tone="danger"
@@ -241,7 +241,7 @@ function BrowseDialog() {
               </div>
             ))}
           </div>
-        ) : browse.isError ? (
+        ) : (browse.isError && browse.data === undefined) ? (
           <EmptyState
             compact
             tone="danger"

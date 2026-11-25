@@ -7,7 +7,11 @@ import { RecorderProvider } from "@/features/recorder/provider";
 import { WorkspaceProvider } from "@/lib/workspace";
 import { Sheet, SheetContent } from "@/ui/sheet";
 import { AuthGate } from "./auth-gate";
-import { CommandPalette } from "./command-palette";
+import { RefreshBar } from "./refresh-bar";
+import { RefreshFailureNotice } from "./refresh-failure-notice";
+import { WarmCaches } from "./warm-caches";
+import dynamic from "next/dynamic";
+import { useEverTrue } from "@/lib/hooks/use-ever-true";
 import { CreateTaskDialog } from "./create-task-dialog";
 import { ShellProvider, useShell } from "./shell-context";
 import { ShortcutsDialog } from "./shortcuts-dialog";
@@ -150,14 +154,25 @@ function useDrawerSwipe(close: () => void) {
   };
 }
 
+// The command palette (and the search it carries) loads the first time it is opened.
+const CommandPalette = dynamic(() => import("./command-palette").then((m) => m.CommandPalette), { ssr: false });
+
+function LazyPalette() {
+  const { palette } = useShell();
+  return useEverTrue(palette.open) ? <CommandPalette /> : null;
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceProvider>
       <ShellProvider>
         <RecorderProvider>
           <AuthGate />
+          <WarmCaches />
+          <RefreshBar />
+          <RefreshFailureNotice />
           <Frame>{children}</Frame>
-          <CommandPalette />
+          <LazyPalette />
           <ShortcutsDialog />
           <CreateTaskDialog />
         </RecorderProvider>

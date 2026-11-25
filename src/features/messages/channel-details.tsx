@@ -192,7 +192,7 @@ export function ChannelDetails({
                 </div>
               ))}
             </div>
-          ) : members.isError ? (
+          ) : (members.isError && members.data === undefined) ? (
             <p className="text-13 text-fg-muted">
               Couldn&apos;t load members. {errorMessage(members.error)}{" "}
               <button type="button" className="font-medium text-fg underline-offset-2 hover:underline" onClick={() => members.refetch()}>

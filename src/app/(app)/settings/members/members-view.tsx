@@ -87,7 +87,7 @@ export function MembersView() {
             title="Only admins can see this list"
             description="Ask a workspace owner or admin if you need someone added."
           />
-        ) : members.isError || !workspaceId || !members.data ? (
+        ) : (members.isError && members.data === undefined) || !workspaceId || !members.data ? (
           <LoadError
             what="members"
             error={workspaceId ? members.error : meError}
@@ -115,7 +115,7 @@ export function MembersView() {
           <div className="mt-2">
             {invites.isPending ? (
               <SkeletonRows rows={3} columns={[36, 14, 20]} />
-            ) : invites.isError ? (
+            ) : (invites.isError && invites.data === undefined) ? (
               <LoadError what="invites" error={invites.error} onRetry={() => invites.refetch()} />
             ) : pendingOf(invites.data).length === 0 ? (
               <p className="rounded-md border border-dashed border-border px-4 py-3 text-13 text-fg-muted">

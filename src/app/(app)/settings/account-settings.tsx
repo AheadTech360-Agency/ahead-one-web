@@ -287,7 +287,7 @@ const KIND_LABEL: Record<NotificationKind, { label: string; line: string }> = {
 function NotificationsTab() {
   const q = useNotificationPrefs();
   if (q.isPending) return <SkeletonRows rows={6} columns={[40, 8, 8, 8]} />;
-  if (q.isError) {
+  if ((q.isError && q.data === undefined)) {
     return (
       <EmptyState
         compact
@@ -711,7 +711,7 @@ function DeliveryStatus() {
           </li>
         ))}
       </ul>
-      {q.isError ? (
+      {(q.isError && q.data === undefined) ? (
         <p className="border-t border-border-subtle px-4 py-2.5 text-12 text-danger-text">
           Couldn&apos;t check delivery status. {errorMessage(q.error)}
         </p>

@@ -19,6 +19,7 @@ import { FilesCard } from "@/features/files/files-card";
 import { useDashboard } from "../api";
 import { FeedItem, MentionRow, MyTaskRow } from "../components/my-task-row";
 import { TaskSlideOver } from "../components/task-slide-over";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useTaskLink } from "../lib/use-task-filters";
 
 /*
@@ -76,7 +77,7 @@ export function HomeDashboard() {
       <div className="mt-6 md:mt-8">
         {q.isPending ? (
           <DashboardSkeleton />
-        ) : q.isError ? (
+        ) : (q.isError && q.data === undefined) ? (
           <EmptyState
             tone="danger"
             icon={CircleAlert}
@@ -262,6 +263,7 @@ function HorizonLegend() {
 function Horizon({ today, upcoming, overdue }: { today: MyTask[]; upcoming: MyTask[]; overdue: MyTask[] }) {
   const stamp = useToday();
   const link = useTaskLink();
+  const pf = usePrefetchers();
   const days = useMemo(() => {
     const base = stamp ? startOfDay(new Date(`${stamp.slice(0, 10)}T12:00:00`)) : null;
     if (!base) return [];
@@ -283,6 +285,7 @@ function Horizon({ today, upcoming, overdue }: { today: MyTask[]; upcoming: MyTa
             <Link
               href={link.href(t.task.id)}
               scroll={false}
+              {...intent(() => pf.task(t.task.id))}
               aria-label={`${t.task.title}${late ? ", overdue" : ""}`}
               className={cn(
                 "h-3 w-full max-w-11 rounded-[4px] transition-transform duration-[var(--dur-fast)] ease-out motion-safe:hover:scale-110 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",

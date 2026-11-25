@@ -33,6 +33,7 @@ import {
 } from "@/ui/menu";
 import { Skeleton } from "@/ui/skeleton";
 import { toast } from "@/ui/toaster";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { Collapse, useLeaving, useRevealOnce, useSettled } from "./sidebar-motion";
 import { SidebarSection } from "./sidebar-section";
 import { sbRow, sbRowActive, sbRowIdle } from "./sidebar-styles";
@@ -299,7 +300,7 @@ export function SpacesTree({ onNavigate }: { onNavigate?: () => void }) {
     >
       {tree.isPending && workspaceId ? (
         <TreeSkeleton />
-      ) : tree.isError || !workspaceId || !tree.data ? (
+      ) : (tree.isError && tree.data === undefined) || !workspaceId || !tree.data ? (
         <div className="px-2 py-1.5 text-12 text-fg-muted">
           <p>Couldn&apos;t load spaces.</p>
           {workspaceId && (
@@ -448,6 +449,7 @@ const Row = memo(function Row({
   actions: TreeActions;
 }) {
   const pathname = usePathname();
+  const pf = usePrefetchers();
   const { href, color, shape, isPrivate, expandable } = node;
   const active = href ? pathname === href : false;
   const childKind = CHILD_KIND[node.kind];
@@ -509,6 +511,7 @@ const Row = memo(function Row({
       data-active={active}
       className={cn(sbRow, "group/row gap-1.5 pr-1", active ? sbRowActive : sbRowIdle)}
       style={{ paddingLeft: 4 + (node.level - 1) * 14 }}
+      {...intent(() => (node.kind === "project" ? pf.project(node.id) : node.kind === "list" ? pf.list(node.id, node.parentId ?? undefined) : undefined))}
     >
       {node.kind !== "list" ? (
         <button

@@ -281,7 +281,7 @@ function SearchMode({
           <p className="px-3 py-8 text-center text-13 text-fg-muted">
             {workspaceId ? "Type at least 2 characters." : "Search is unavailable until your workspace loads."}
           </p>
-        ) : results.isError ? (
+        ) : (results.isError && results.data === undefined) ? (
           <p className="flex items-center justify-center gap-2 px-3 py-8 text-13 text-fg-muted">
             <CircleAlert className="size-4 text-danger" aria-hidden />
             {errorMessage(results.error)}

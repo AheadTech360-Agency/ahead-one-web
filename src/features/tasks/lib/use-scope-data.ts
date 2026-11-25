@@ -44,13 +44,24 @@ export type ScopeData = {
 };
 
 export function useScopeData(scope: TaskScope, projectId: string | undefined, listsHint?: ScopeList[]): ScopeData {
-  const { me } = useWorkspace();
+  const { me, workspaceId } = useWorkspace();
   const project = useProject(projectId);
   const projectLists = useProjectLists(scope.kind === "project" ? projectId : undefined);
+  // The sidebar tree already knows a project's lists, so statuses can load in parallel with the
+  // lists request instead of waiting for it (project -> lists -> statuses was a three step waterfall).
+  const tree = useTree(scope.kind === "project" ? workspaceId : undefined);
+  const treeLists = useMemo<ScopeList[] | undefined>(() => {
+    for (const s of tree.data ?? []) {
+      const p = s.projects.find((x) => x.id === projectId);
+      if (p) return p.lists.map((l) => ({ id: l.id, name: l.name }));
+    }
+    return undefined;
+  }, [tree.data, projectId]);
   const lists = useMemo<ScopeList[]>(() => {
     if (scope.kind === "list") return listsHint ?? [{ id: scope.id, name: "" }];
-    return (projectLists.data ?? []).filter((l) => !l.archived_at).map((l) => ({ id: l.id, name: l.name }));
-  }, [scope, listsHint, projectLists.data]);
+    if (!projectLists.data) return treeLists ?? [];
+    return projectLists.data.filter((l) => !l.archived_at).map((l) => ({ id: l.id, name: l.name }));
+  }, [scope, listsHint, projectLists.data, treeLists]);
   const statusQ = useStatusesFor(lists.map((l) => l.id));
   const statuses = statusQ.data;
   const groups = useMemo(() => buildGroups(statuses, lists), [statuses, lists]);
@@ -65,11 +76,12 @@ export function useScopeData(scope: TaskScope, projectId: string | undefined, li
   return {
     scope,
     project: project.data,
-    projectStatus: project.status,
+    // A failed background refresh over cached data is not a load error.
+    projectStatus: project.status === "error" && project.data !== undefined ? "success" : project.status,
     projectError: project.error,
     lists,
     statuses,
-    statusesPending: statusQ.isPending || (scope.kind === "project" && projectLists.isPending),
+    statusesPending: statusQ.isPending || (scope.kind === "project" && projectLists.isPending && !treeLists),
     groups,
     statusById,
     access,

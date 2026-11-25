@@ -141,6 +141,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     return { kind: "two_factor", challenge: { challenge_id, email_hint, expires_in, resend_after } };
   }
   markFreshLogin();
+  runSignedInTasks();
   applySession(body);
   return { kind: "signed_in", aal: body.aal };
 }
@@ -148,6 +149,7 @@ export async function signIn(email: string, password: string): Promise<SignInRes
 export async function verifyCode(challengeId: string, code: string): Promise<void> {
   const body = await bff<SessionBody>("two-factor/verify", { challenge_id: challengeId, code });
   markFreshLogin();
+  runSignedInTasks();
   applySession(body);
 }
 
@@ -170,6 +172,22 @@ export function onBeforeSignOut(fn: Task) {
 export function onSignedOut(fn: Task) {
   afterTasks.add(fn);
   return () => void afterTasks.delete(fn);
+}
+
+const signedInTasks = new Set<Task>();
+/** Runs when a fresh sign-in succeeds, before the new session is applied (wipe the previous user's cached data). */
+export function onSignedIn(fn: Task) {
+  signedInTasks.add(fn);
+  return () => void signedInTasks.delete(fn);
+}
+function runSignedInTasks() {
+  for (const t of [...signedInTasks]) {
+    try {
+      void Promise.resolve(t()).catch(() => undefined);
+    } catch {
+      // Cleanup must never block sign-in.
+    }
+  }
 }
 
 const AUTH_PATHS = ["/login", "/forgot-password", "/reset-password", "/invite/"];

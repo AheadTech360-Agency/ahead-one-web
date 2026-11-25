@@ -16,6 +16,7 @@ import { IconButton } from "@/ui/icon-button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/menu";
 import { Skeleton } from "@/ui/skeleton";
 import { conversationLabel, conversationName, dmPartner, listStamp, previewOf, type People } from "./format";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { openMessagesDialog } from "./stores";
 import { useTypers } from "./typing-indicator";
 import { usePeople } from "./use-people";
@@ -46,12 +47,14 @@ function TypingOr({ c, children }: { c: Conversation; children: React.ReactNode 
 }
 
 function Row({ c, active, meId, people }: { c: Conversation; active: boolean; meId?: string; people: People }) {
+  const pf = usePrefetchers();
   const partner = c.kind === "dm" ? dmPartner(c, meId) : undefined;
   const unread = c.unread_count > 0 && !active;
   const preview = previewOf(c.last_message, people, meId);
   return (
     <Link
       href={`/messages/${c.id}`}
+      {...intent(() => pf.conversation(c.id))}
       aria-current={active ? "page" : undefined}
       aria-label={`${conversationLabel(c, meId)}${unread ? `, ${c.unread_count} unread` : ""}`}
       className={cn(

@@ -36,7 +36,7 @@ export function ConversationFiles({ c, open, onOpenChange }: { c: Conversation; 
                 <Skeleton key={i} className="h-12" />
               ))}
             </div>
-          ) : files.isError ? (
+          ) : (files.isError && files.data === undefined) ? (
             <EmptyState
               compact
               tone="danger"

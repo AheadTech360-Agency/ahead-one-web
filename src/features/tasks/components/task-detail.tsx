@@ -22,7 +22,7 @@ import { toast } from "@/ui/toaster";
 import { useDeleteTask, useSaveDescription, useTask, useUpdateTask } from "../api";
 import { projectAccess, type Access } from "../lib/access";
 import { absoluteTime } from "../lib/dates";
-import { RichTextEditor } from "../rich-text/editor";
+import { RichTextEditor } from "../rich-text/lazy-editor";
 import { RichTextView } from "../rich-text/rich-text-view";
 import { isEmptyDoc } from "../rich-text/schema";
 import { ActivityList } from "./activity";
@@ -59,7 +59,7 @@ export function TaskDetail({
   const people = useAssignable(q.data?.project.id);
 
   if (q.isPending) return <DetailSkeleton layout={layout} onClose={onClose} />;
-  if (q.isError) {
+  if ((q.isError && q.data === undefined)) {
     const gone = isApiError(q.error) && (q.error.status === 404 || q.error.status === 403);
     return (
       <>

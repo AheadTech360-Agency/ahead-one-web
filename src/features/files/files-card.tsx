@@ -30,7 +30,7 @@ export function FilesCard({ className }: { className?: string }) {
           <Skeleton className="h-10 w-24" />
           <Skeleton className="h-10 w-28" />
         </div>
-      ) : q.isError || !s ? (
+      ) : (q.isError && q.data === undefined) || !s ? (
         <p className="flex flex-1 items-center gap-2 text-13 text-fg-muted">
           <CircleAlert className="size-4 text-danger-text" aria-hidden /> {errorMessage(q.error)}
           <Button size="sm" variant="ghost" onClick={() => void q.refetch()}>

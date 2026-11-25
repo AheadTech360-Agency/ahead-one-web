@@ -84,7 +84,7 @@ export function MyTasksScreen() {
             <TabsContent key={b.value} value={b.value} className="pt-2 outline-none">
               {q.isPending ? (
                 <RowsSkeleton />
-              ) : q.isError ? (
+              ) : (q.isError && q.data === undefined) ? (
                 <EmptyState
                   tone="danger"
                   icon={CircleAlert}

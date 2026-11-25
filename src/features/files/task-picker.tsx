@@ -38,7 +38,7 @@ export function TaskPicker({ onPick, disabled, autoFocus }: { onPick: (t: TaskHi
           <p className="flex items-center gap-2 px-3 py-4 text-13 text-fg-muted">
             <Spinner label="Searching" /> Searching
           </p>
-        ) : search.isError ? (
+        ) : (search.isError && search.data === undefined) ? (
           <p className="px-3 py-4 text-13 text-danger-text">Search didn&apos;t load. Try again.</p>
         ) : tasks.length === 0 ? (
           <p className="px-3 py-4 text-13 text-fg-muted">No tasks match &ldquo;{q}&rdquo;.</p>

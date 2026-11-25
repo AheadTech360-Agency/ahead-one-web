@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useEffect, useRef } from "react";
 import { useUnreadCount } from "@/lib/api/hooks";
+import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useBump } from "@/lib/hooks/use-bump";
 import { cn } from "@/lib/utils";
 import { SidebarMessages } from "@/features/messages/sidebar-messages";
@@ -38,12 +39,15 @@ function NavLink({
   const { sidebarCollapsed } = useShell();
   const active = exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
   const bump = useBump(count);
+  const pf = usePrefetchers();
+  const warm = href === "/" ? pf.home : href === "/my-tasks" ? pf.myTasks : undefined;
   const hasCount = count !== undefined && count > 0;
   return (
     <Tooltip content={label} shortcut={shortcut} side="right" disabled={!sidebarCollapsed}>
       <Link
         href={href}
         onClick={onNavigate}
+        {...(warm ? intent(warm) : {})}
         aria-current={active ? "page" : undefined}
         data-active={active}
         className={cn(sbRow, "gap-2.5 overflow-hidden px-2 font-medium", active ? sbRowActive : sbRowIdle)}

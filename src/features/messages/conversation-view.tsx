@@ -258,7 +258,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
   if (c) return <Loaded c={c} />;
 
-  if (detail.isError) {
+  if ((detail.isError && detail.data === undefined)) {
     const missing = isApiError(detail.error) && (detail.error.isNotFound || detail.error.status === 403);
     return (
       <div className="flex h-full items-center justify-center">
