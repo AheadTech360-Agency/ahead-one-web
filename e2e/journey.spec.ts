@@ -191,3 +191,18 @@ test("owner signs out and signs in again with password and a fresh emailed code"
   await enterCode(owner, await waitForSignInCode(run.ownerEmail, since));
   await expectSignedIn(owner);
 });
+
+test("settings shows what can be delivered and a test explains what is not set up", async () => {
+  await owner.goto("/settings?tab=notifications");
+  const panel = owner.getByRole("region", { name: "Delivery" });
+  await expect(panel).toBeVisible();
+  // in-app is always on
+  await expect(panel.getByText("Always on")).toBeVisible();
+  // the e2e API runs without SMTP and Firebase, so the panel must say so plainly
+  await expect(panel.getByText("Not set up").first()).toBeVisible();
+
+  await panel.getByRole("button", { name: "Send me a test" }).click();
+  // nothing can be delivered here: each channel reports why, instead of failing silently
+  await expect(panel.getByText("Test:")).toHaveCount(2);
+  await expect(panel.getByText("Not set up on the server")).toHaveCount(2);
+});

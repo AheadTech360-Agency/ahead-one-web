@@ -9,15 +9,26 @@ import { NewPasswordFields, validateNewPassword } from "@/components/auth/new-pa
 import { errorMessage, isApiError } from "@/lib/api/client";
 import {
   useChangePassword,
+  useNotificationChannels,
   useNotificationPrefs,
+  useSendTestNotification,
   useSetTwoFactor,
   useUpdateMe,
   useUpdateNotificationPrefs,
 } from "@/lib/api/hooks";
-import type { MeResponse, NotificationKind, NotificationPrefs, Profile } from "@/lib/api/types";
+import type {
+  MeResponse,
+  NotificationChannels,
+  NotificationKind,
+  NotificationPrefs,
+  Profile,
+  TestNotificationResult,
+  TestOutcome,
+} from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
+import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Checkbox, Switch } from "@/ui/checkbox";
 import { EmptyState } from "@/ui/empty-state";
@@ -319,6 +330,7 @@ function NotificationPrefsForm({ initial }: { initial: NotificationPrefs }) {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
+      <DeliveryStatus />
       <table className="w-full text-13">
         <caption className="sr-only">Notification channels by event</caption>
         <thead>
@@ -592,6 +604,118 @@ function PasswordSection() {
           </Button>
         </div>
       </form>
+    </section>
+  );
+}
+
+const OUTCOME_TEXT: Record<TestOutcome, { tone: "success" | "warning" | "danger" | "neutral"; label: string }> = {
+  sent: { tone: "success", label: "Sent" },
+  not_configured: { tone: "warning", label: "Not set up on the server" },
+  no_devices: { tone: "warning", label: "No device has notifications on" },
+  failed: { tone: "danger", label: "Couldn't deliver" },
+};
+
+function channelLine(c: NotificationChannels | undefined, kind: "email" | "push") {
+  if (!c) return { tone: "neutral" as const, label: "Checking", hint: "" };
+  if (kind === "email") {
+    return c.email
+      ? { tone: "success" as const, label: "Ready", hint: "Sent to your account email." }
+      : {
+          tone: "warning" as const,
+          label: "Not set up",
+          hint: "The server has no mail settings yet. An admin needs to add them.",
+        };
+  }
+  if (!c.push) {
+    return {
+      tone: "warning" as const,
+      label: "Not set up",
+      hint: "Push needs Firebase settings on the server. An admin can follow the notifications guide to add them.",
+    };
+  }
+  return c.push_devices > 0
+    ? {
+        tone: "success" as const,
+        label: "Ready",
+        hint: `${c.push_devices} ${c.push_devices === 1 ? "device" : "devices"} will receive push.`,
+      }
+    : {
+        tone: "neutral" as const,
+        label: "Ready, no device yet",
+        hint: "Turn on browser notifications below to receive push on this device.",
+      };
+}
+
+/** What will and won't arrive, plus a button that proves it by sending a real test. */
+function DeliveryStatus() {
+  const q = useNotificationChannels();
+  const test = useSendTestNotification();
+  const [result, setResult] = useState<TestNotificationResult | null>(null);
+  const email = channelLine(q.data, "email");
+  const push = channelLine(q.data, "push");
+
+  function run() {
+    setResult(null);
+    test.mutate(undefined, {
+      onSuccess: (r) => {
+        setResult(r);
+        if (r.email === "sent" || r.push === "sent") {
+          toast.success("Test sent", {
+            description:
+              r.email === "sent" && r.push === "sent"
+                ? "Check your email and this device."
+                : r.email === "sent"
+                  ? "Check your email."
+                  : "Check this device.",
+          });
+        }
+      },
+      onError: (e) => toast.error("Couldn't send the test", { description: errorMessage(e) }),
+    });
+  }
+
+  const rows = [
+    { name: "In app", tone: "success" as const, label: "Always on", hint: "The bell and your Inbox update live.", out: null },
+    { name: "Email", ...email, out: result?.email },
+    { name: "Push", ...push, out: result?.push },
+  ];
+
+  return (
+    <section aria-labelledby="delivery-heading" className="rounded-md border border-border">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
+        <div>
+          <h2 id="delivery-heading" className="text-14 font-semibold text-fg">
+            Delivery
+          </h2>
+          <p className="text-12 text-fg-muted">What can reach you, and a way to check it.</p>
+        </div>
+        <Button size="sm" variant="secondary" loading={test.isPending} onClick={run}>
+          Send me a test
+        </Button>
+      </div>
+      <ul className="divide-y divide-border-subtle">
+        {rows.map((r) => (
+          <li key={r.name} className="flex items-start justify-between gap-4 px-4 py-2.5">
+            <div className="min-w-0">
+              <p className="text-13 font-medium text-fg">{r.name}</p>
+              <p className="text-12 text-fg-muted">{r.hint}</p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1" aria-live="polite">
+              <Badge tone={r.tone}>{r.label}</Badge>
+              {r.out ? (
+                <span className="text-12 text-fg-muted">
+                  Test: <span className={r.out === "sent" ? "text-success-text" : "text-warning-text"}>{OUTCOME_TEXT[r.out].label}</span>
+                </span>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {q.isError ? (
+        <p className="border-t border-border-subtle px-4 py-2.5 text-12 text-danger-text">
+          Couldn&apos;t check delivery status. {errorMessage(q.error)}
+        </p>
+      ) : null}
     </section>
   );
 }

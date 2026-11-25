@@ -8,33 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { api } from "./client";
 import { qk } from "./keys";
-import type {
-  AcceptInvite,
-  ChangePassword,
-  ForgotPassword,
-  ResetPassword,
-  SetTwoFactor,
-  AuditEntry,
-  Conversation,
-  CreateInvite,
-  Invite,
-  InvitePreview,
-  MeResponse,
-  Member,
-  Membership,
-  Notification,
-  NotificationPrefs,
-  Page,
-  Profile,
-  Project,
-  List,
-  RegisterInvite,
-  Role,
-  Space,
-  TreeSpace,
-  UnreadCount,
-  UpdateMe,
-} from "./types";
+import type { AcceptInvite, AuditEntry, ChangePassword, Conversation, CreateInvite, ForgotPassword, Invite, InvitePreview, List, MeResponse, Member, Membership, Notification, NotificationChannels, NotificationPrefs, Page, Profile, Project, RegisterInvite, ResetPassword, Role, SetTwoFactor, Space, TestNotificationResult, TreeSpace, UnreadCount, UpdateMe } from "./types";
 
 /* ---------- Me ---------- */
 
@@ -322,5 +296,23 @@ export function useUpdateNotificationPrefs() {
     mutationFn: (body: NotificationPrefs) =>
       api<NotificationPrefs>("/v1/notification-prefs", { method: "PUT", body }),
     onSuccess: (data) => qc.setQueryData(qk.notifications.prefs(), data),
+  });
+}
+
+/** Which channels the server can deliver on (email, push) and how many devices are registered. */
+export function useNotificationChannels() {
+  return useQuery({
+    queryKey: qk.notifications.channels(),
+    queryFn: ({ signal }) => api<NotificationChannels>("/v1/notifications/channels", { signal }),
+    staleTime: 60_000,
+  });
+}
+
+/** Sends one real test email and one test push to the signed-in person. */
+export function useSendTestNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<TestNotificationResult>("/v1/notifications/test", { method: "POST" }),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.notifications.channels() }),
   });
 }

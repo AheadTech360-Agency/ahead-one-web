@@ -12,6 +12,7 @@ export const qk = {
     list: (unreadOnly: boolean) => ["notifications", "list", { unreadOnly }] as const,
     unreadCount: () => ["notifications", "unread-count"] as const,
     prefs: () => ["notifications", "prefs"] as const,
+    channels: () => ["notifications", "channels"] as const,
   },
   workspace: (ws: string) => ({
     all: ["ws", ws] as const,
