@@ -28,6 +28,13 @@ const firebase = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
   : [];
 
 /*
+ * File storage (Cloudflare R2). The browser PUTs uploads to, and plays/downloads files from, signed URLs on
+ * the account's R2 endpoint, so it needs connect-src (XHR PUT) and media-src (inline video and audio).
+ * Images already load from any https origin (img-src below).
+ */
+const r2 = "https://*.r2.cloudflarestorage.com";
+
+/*
  * Content Security Policy. Fonts are self-hosted by next/font, so font-src is 'self'.
  * script-src keeps 'unsafe-inline' because Next.js and next-themes inject inline bootstrap
  * scripts; moving to a nonce-based policy (set in proxy.ts) is the planned hardening step.
@@ -38,10 +45,10 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${[...api, ...firebase].join(" ")}${isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""}`.trim(),
+  `connect-src 'self' ${[...api, ...firebase, r2].join(" ")}${isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""}`.trim(),
   "worker-src 'self' blob:",
   "manifest-src 'self'",
-  "media-src 'self' blob:",
+  `media-src 'self' blob: ${r2}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -57,7 +64,8 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()",
+    // The screen recorder needs display-capture and (optionally) the microphone, for this origin only.
+    value: "camera=(), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
   ...(isDev ? [] : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]),
