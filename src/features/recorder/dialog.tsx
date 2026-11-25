@@ -136,7 +136,7 @@ function Review() {
           preload="metadata"
           aria-label="Recording preview"
           data-testid="recording-preview"
-          className="aspect-video max-h-[34vh] w-full rounded-sm bg-navy-deep object-contain"
+          className={cn("aspect-video w-full rounded-sm bg-navy-deep object-contain", saved ? "max-h-[22vh]" : "max-h-[34vh]")}
         />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-12 text-fg-muted tabular">
           <span>{formatClock(secs * 1000)} long</span>

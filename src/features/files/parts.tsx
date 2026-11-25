@@ -60,13 +60,14 @@ const SOURCE_NAME = { task: "Task", channel: "Channel", dm: "Direct message", re
 export function SourceLabel({ s, className }: { s: FileSource; className?: string }) {
   const Icon = SOURCE_ICON[s.kind];
   // Channel names already arrive as "#name"; show them as-is.
-  const sub = s.kind === "recording" ? "Only you, not attached" : s.project_name ? s.project_name : SOURCE_NAME[s.kind];
+  const recording = s.kind === "recording";
+  const sub = recording ? "Only you can see it" : s.project_name ? s.project_name : SOURCE_NAME[s.kind];
   return (
     <span className={cn("flex min-w-0 items-center gap-2", className)}>
       <Icon className="size-3.5 shrink-0 text-fg-faint" aria-hidden />
       <span className="min-w-0">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate text-13 text-fg">{s.name}</span>
+          <span className="truncate text-13 text-fg">{recording ? "Not attached to a task" : s.name}</span>
           {s.is_private && (
             <Tooltip content={s.kind === "dm" ? "Direct message: only its members can see this file" : "Locked: only members can see this file"}>
               <span className="inline-flex shrink-0 text-fg-muted" tabIndex={0} role="img" aria-label={s.kind === "dm" ? "Private, direct message" : "Private, locked channel"}>
