@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { errorMessage, isApiError } from "@/lib/api/client";
 import type { Attachment, UploadTicket } from "@/lib/api/types";
+import { tagRecording } from "@/lib/files/recording-meta";
 import { capReached, durationSecs, limitMessage, recordingFilename, unsupportedReason, type StopReason } from "@/lib/files/recording";
 import { useWorkspace } from "@/lib/workspace";
 import { ConfirmDialog } from "@/ui/dialog";
@@ -305,7 +306,12 @@ export function RecorderProvider({ children }: { children: React.ReactNode }) {
     if (!r || !workspaceId) return;
     const finalTitle = title.trim() || defaultTitle();
     if (target.kind === "chat") {
-      target.onFile(new File([r.blob], recordingFilename(finalTitle, r.mime), { type: r.mime }));
+      target.onFile(
+        tagRecording(new File([r.blob], recordingFilename(finalTitle, r.mime), { type: r.mime }), {
+          duration_secs: Math.min(600, Math.max(1, durationSecs(r.durationMs))),
+          has_audio: r.hasAudio,
+        }),
+      );
       toast.success("Recording added to your message", { description: "Add a note if you like, then send." });
       resetAll();
       return;

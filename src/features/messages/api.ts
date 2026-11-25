@@ -4,6 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { api, ApiRequestError } from "@/lib/api/client";
 import { chatKeys } from "@/lib/api/keys";
 import { mimeForFile } from "@/lib/files/limits";
+import { recordingMetaOf } from "@/lib/files/recording-meta";
 import type {
   Attachment,
   Conversation,
@@ -270,7 +271,7 @@ export async function uploadAttachment(
   const mime = mimeForFile(file);
   const ticket = await api<UploadTicket>(`/v1/conversations/${conversationId}/attachments/upload-url`, {
     method: "POST",
-    body: { filename: file.name, mime, size_bytes: file.size },
+    body: { filename: file.name, mime, size_bytes: file.size, recording: recordingMetaOf(file) },
     signal,
   });
   await putWithProgress(ticket.upload_url, file, mime, onProgress, signal);

@@ -70,6 +70,7 @@ export type * from "./ProjectPermission";
 export type * from "./ProjectStat";
 export type * from "./PushPlatform";
 export type * from "./ReadState";
+export type * from "./RecordingMeta";
 export type * from "./RefreshRequest";
 export type * from "./RegisterInvite";
 export type * from "./RegisterPushToken";
