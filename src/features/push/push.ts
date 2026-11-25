@@ -6,8 +6,10 @@ import type { RegisterPushToken, RemovePushToken } from "@/lib/api/types";
 
 /*
  * Web push through Firebase Cloud Messaging. Active only when every NEXT_PUBLIC_FIREBASE_* value
- * is set. Permission is requested only from a user action (settings switch or the dismissible
- * prompt); nothing here runs on page load except a silent token refresh when push is already on.
+ * is set. Permission is requested only from a user action (settings switch, the bell nudge or the
+ * sign-in dialog). After a fresh sign-in, PushLoginPrompt offers it (see push-decision.ts); an
+ * already-granted permission is registered silently. Otherwise nothing runs on page load except a
+ * silent token refresh when push is already on.
  *
  * The service worker is served by src/app/firebase-messaging-sw.js/route.ts. It shows the
  * notification itself (no Firebase SDK inside the worker) and opens the `link` on click.
@@ -111,6 +113,11 @@ export function usePushState() {
 
 export function dismissPushPrompt() {
   write(DISMISS_KEY, "1");
+}
+
+/** A new sign-in asks again: forget an earlier "dismissed" so the bell nudge returns too. */
+export function resetPushDismissed() {
+  write(DISMISS_KEY, null);
 }
 
 /* ---------- Firebase ---------- */

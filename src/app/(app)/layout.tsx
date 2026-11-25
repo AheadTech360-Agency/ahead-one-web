@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/shell/app-shell";
 import { MessagesDialogs } from "@/features/messages/dialogs";
 import { LiveNotificationToasts } from "@/features/notifications/live-toasts";
-import { PushSync } from "@/features/push/push-controls";
+import { PushLoginPrompt, PushSync } from "@/features/push/push-controls";
 import { RealtimeProvider } from "@/features/realtime/provider";
 import { Skeleton } from "@/ui/skeleton";
 
@@ -19,6 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <MessagesDialogs />
           <LiveNotificationToasts />
           <PushSync />
+          <PushLoginPrompt />
         </AppShell>
       </RealtimeProvider>
     </Suspense>

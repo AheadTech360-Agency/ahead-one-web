@@ -46,6 +46,7 @@ CI (`.github/workflows/ci.yml`) runs the same on every PR.
 
 - Import the repo in Vercel (framework: Next.js; no custom build settings).
 - Environment variables: `NEXT_PUBLIC_API_URL=https://<service>.up.railway.app` (the API's Railway public domain), `BFF_SECRET` (the same value as on the API; server-side only), optionally `API_INTERNAL_URL`, and the `NEXT_PUBLIC_FIREBASE_*` values for web push.
+- Web push is on by default per sign-in: `signIn`/`verifyCode` set a fresh-login flag (`src/lib/auth/fresh-login.ts`) and `PushLoginPrompt` (`src/features/push/push-controls.tsx`) acts on it once, using the pure `decidePushLogin` (`push-decision.ts`): permission undecided shows a dialog ("Not now" skips this sign-in only), granted without a token registers silently, blocked shows one toast linking to Settings. Unsupported browsers see nothing.
 - Domain `portal.aheadtech360.com` through Cloudflare DNS (CNAME to Vercel). The API's `WEB_ORIGIN` must be exactly this origin. The refresh cookie is set by this app's own `/api/auth` routes on the portal host (`__Host-`, host-only), and the browser calls the API with a bearer token and no cookies, so the API can live on any hostname (it uses Railway's public domain).
 
 ## End-to-end tests

@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { ApiRequestError, isApiError, parseError } from "@/lib/api/errors";
 import type { Aal, ResendResult } from "@/lib/api/types";
+import { clearFreshLogin, markFreshLogin } from "./fresh-login";
 import { CSRF_HEADER, type SessionBody, type SignInReason, type TwoFactorChallenge } from "./types";
 
 /*
@@ -33,6 +34,7 @@ function applySession(body: SessionBody) {
 }
 
 function clearLocal() {
+  clearFreshLogin();
   token = null;
   expiresAt = 0;
   setState({ status: "signedOut", aal: null });
@@ -138,12 +140,15 @@ export async function signIn(email: string, password: string): Promise<SignInRes
     const { challenge_id, email_hint, expires_in, resend_after } = body;
     return { kind: "two_factor", challenge: { challenge_id, email_hint, expires_in, resend_after } };
   }
+  markFreshLogin();
   applySession(body);
   return { kind: "signed_in", aal: body.aal };
 }
 
 export async function verifyCode(challengeId: string, code: string): Promise<void> {
-  applySession(await bff<SessionBody>("two-factor/verify", { challenge_id: challengeId, code }));
+  const body = await bff<SessionBody>("two-factor/verify", { challenge_id: challengeId, code });
+  markFreshLogin();
+  applySession(body);
 }
 
 export function resendCode(challengeId: string): Promise<ResendResult> {
