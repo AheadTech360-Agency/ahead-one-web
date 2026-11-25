@@ -19,10 +19,19 @@ export function CacheScopeGuard() {
   const qc = useQueryClient();
 
   useEffect(() => {
+    // The user this page has already shown data for. If /v1/me ever names someone else (a session that
+    // expired and another person signed in on the same tab), nothing from the first person may stay.
+    let seen: string | undefined;
     const apply = () => {
       const me = qc.getQueryData<MeResponse>(qk.me());
       const id = me?.user.id;
       if (!id) return;
+      if (seen && seen !== id) {
+        qc.clear();
+        void wipePersistedCache().finally(() => window.location.reload());
+        return;
+      }
+      seen = id;
       if (decideScope(getRestoredUserId(), id) === "wipe") {
         void wipePersistedCache().finally(() => window.location.reload());
         return;
@@ -33,7 +42,12 @@ export function CacheScopeGuard() {
     const off = qc.getQueryCache().subscribe((e) => {
       if (e.type === "updated" && e.query.queryKey[0] === "me" && e.query.state.status === "success") apply();
     });
-    const offIn = onSignedIn(() => void wipePersistedCache());
+    // A fresh sign-in starts from nothing: clear what is in memory and what is stored, before the new
+    // session can read either.
+    const offIn = onSignedIn(() => {
+      qc.clear();
+      return wipePersistedCache();
+    });
     const offOut = onSignedOut(() => {
       qc.clear();
       return wipePersistedCache();
