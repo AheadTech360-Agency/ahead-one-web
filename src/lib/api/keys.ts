@@ -25,6 +25,9 @@ export const qk = {
     dashboard: () => ["ws", ws, "dashboard"] as const,
     myTasks: (bucket: string) => ["ws", ws, "my-tasks", bucket] as const,
     search: (q: string) => ["ws", ws, "search", q] as const,
+    filesAll: () => ["ws", ws, "files"] as const,
+    files: (filters: object) => ["ws", ws, "files", "list", filters] as const,
+    filesSummary: () => ["ws", ws, "files", "summary"] as const,
   }),
 };
 
