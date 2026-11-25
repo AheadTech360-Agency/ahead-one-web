@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isApiConfigured } from "@/lib/env";
 import { cn } from "@/lib/utils";
+import { RecorderProvider } from "@/features/recorder/provider";
 import { WorkspaceProvider } from "@/lib/workspace";
 import { Sheet, SheetContent } from "@/ui/sheet";
 import { AuthGate } from "./auth-gate";
@@ -153,11 +154,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceProvider>
       <ShellProvider>
-        <AuthGate />
-        <Frame>{children}</Frame>
-        <CommandPalette />
-        <ShortcutsDialog />
-        <CreateTaskDialog />
+        <RecorderProvider>
+          <AuthGate />
+          <Frame>{children}</Frame>
+          <CommandPalette />
+          <ShortcutsDialog />
+          <CreateTaskDialog />
+        </RecorderProvider>
       </ShellProvider>
     </WorkspaceProvider>
   );

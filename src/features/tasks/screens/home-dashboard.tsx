@@ -15,6 +15,7 @@ import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty-state";
 import { Skeleton } from "@/ui/skeleton";
 import { Tooltip } from "@/ui/tooltip";
+import { FilesCard } from "@/features/files/files-card";
 import { useDashboard } from "../api";
 import { FeedItem, MentionRow, MyTaskRow } from "../components/my-task-row";
 import { TaskSlideOver } from "../components/task-slide-over";
@@ -90,6 +91,7 @@ export function HomeDashboard() {
         ) : (
           <Org d={q.data} people={people} />
         )}
+        <FilesCard className="mt-4" />
       </div>
       <TaskSlideOver />
     </div>

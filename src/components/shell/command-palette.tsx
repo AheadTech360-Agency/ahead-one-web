@@ -17,6 +17,8 @@ import {
   Settings,
   Sun,
   Users,
+  FolderOpen,
+  Video,
 } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { useRouter } from "next/navigation";
@@ -25,6 +27,7 @@ import { useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api/client";
 import { useTree } from "@/lib/api/hooks";
 import type { Conversation } from "@/lib/api/types";
+import { useRecorder } from "@/features/recorder/provider";
 import { useSearch } from "@/features/tasks/api";
 import { cn } from "@/lib/utils";
 import { roleAtLeast, useWorkspace } from "@/lib/workspace";
@@ -56,6 +59,7 @@ export function CommandPalette() {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const { workspaceId, role } = useWorkspace();
+  const recorder = useRecorder();
   const tree = useTree(workspaceId);
   const [query, setQuery] = useState("");
   const mode = palette.mode;
@@ -169,6 +173,12 @@ export function CommandPalette() {
                   </Command.Item>
                   <Command.Item className={itemClass} onSelect={() => go("/inbox")}>
                     <Bell aria-hidden /> Inbox
+                  </Command.Item>
+                  <Command.Item className={itemClass} onSelect={() => go("/files")}>
+                    <FolderOpen aria-hidden /> Files
+                  </Command.Item>
+                  <Command.Item className={itemClass} onSelect={() => { close(); recorder.open(); }} value="record screen video capture">
+                    <Video aria-hidden /> Record screen
                   </Command.Item>
                   <Command.Item className={itemClass} onSelect={() => go("/messages")}>
                     <MessagesSquare aria-hidden /> Messages

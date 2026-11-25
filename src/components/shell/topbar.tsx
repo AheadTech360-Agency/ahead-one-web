@@ -3,6 +3,7 @@
 import { Menu, PanelLeft, Plus, Search } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { isMac } from "@/lib/utils";
+import { RecordIconButton } from "@/features/recorder/record-button";
 import { IconButton } from "@/ui/icon-button";
 import { KbdCombo } from "@/ui/kbd";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -52,6 +53,7 @@ export function Topbar() {
         <IconButton label="Create task" shortcut={["C"]} onClick={() => setCreateTaskOpen(true)}>
           <Plus aria-hidden />
         </IconButton>
+        <RecordIconButton />
         <NotificationCenter />
         <ThemeToggle />
       </div>

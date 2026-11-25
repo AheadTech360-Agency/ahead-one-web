@@ -44,6 +44,7 @@ export const GOTO: Record<string, { href: string; label: string }> = {
   t: { href: "/my-tasks", label: "My tasks" },
   i: { href: "/inbox", label: "Inbox" },
   m: { href: "/messages", label: "Messages" },
+  f: { href: "/files", label: "Files" },
   s: { href: "/settings", label: "Settings" },
 };
 

@@ -13,6 +13,7 @@ const STATIC: Record<string, Crumb[]> = {
   "/": [{ label: "Home" }],
   "/my-tasks": [{ label: "My tasks" }],
   "/inbox": [{ label: "Inbox" }],
+  "/files": [{ label: "Files" }],
   "/messages": [{ label: "Messages" }],
   "/settings": [{ label: "Settings" }],
   "/settings/members": [{ label: "Settings", href: "/settings" }, { label: "Members" }],

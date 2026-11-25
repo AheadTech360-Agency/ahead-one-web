@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckSquare, Home, Settings, Keyboard } from "lucide-react";
+import { Bell, CheckSquare, FolderOpen, Home, Settings, Keyboard } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo, useEffect, useRef } from "react";
@@ -142,6 +142,7 @@ export function SidebarContent({
           <div className="flex flex-col gap-px pt-2">
             <NavLink href="/" icon={Home} label="Home" shortcut={["G", "H"]} exact onNavigate={onNavigate} />
             <NavLink href="/my-tasks" icon={CheckSquare} label="My tasks" shortcut={["G", "T"]} onNavigate={onNavigate} />
+            <NavLink href="/files" icon={FolderOpen} label="Files" shortcut={["G", "F"]} onNavigate={onNavigate} />
             <NavLink
               href="/inbox"
               icon={Bell}
