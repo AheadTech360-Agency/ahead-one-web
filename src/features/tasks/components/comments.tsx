@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleAlert, MessageSquare, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { CircleAlert, MessageSquare, MoreHorizontal, Paperclip, Pencil, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { errorMessage } from "@/lib/api/client";
 import type { Comment, UserSummary } from "@/lib/api/types";
@@ -13,7 +13,11 @@ import { IconButton } from "@/ui/icon-button";
 import { Kbd } from "@/ui/kbd";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/menu";
 import { Skeleton } from "@/ui/skeleton";
-import { useComments, useCreateComment, useDeleteComment, useEditComment } from "../api";
+import { ACCEPT } from "@/lib/files/limits";
+import { RecordIconButton } from "@/features/recorder/record-button";
+import { Spinner } from "@/ui/spinner";
+import { toast } from "@/ui/toaster";
+import { checkAttachment, useComments, useCreateComment, useDeleteComment, useEditComment, useUploadAttachment } from "../api";
 import { absoluteTime, relativeTime } from "../lib/dates";
 import { RichTextEditor, type RichTextEditorHandle } from "../rich-text/editor";
 import { RichTextView } from "../rich-text/rich-text-view";
@@ -23,10 +27,12 @@ export function CommentsThread({
   taskId,
   me,
   people,
+  taskTitle,
   canComment,
   canModerate,
 }: {
   taskId: string;
+  taskTitle: string;
   me: UserSummary | undefined;
   people: UserSummary[];
   canComment: boolean;
@@ -88,7 +94,7 @@ export function CommentsThread({
           </ol>
         </>
       )}
-      {canComment && <Composer taskId={taskId} me={me} people={people} />}
+      {canComment && <Composer taskId={taskId} taskTitle={taskTitle} me={me} people={people} />}
     </div>
   );
 }
@@ -206,11 +212,32 @@ function CommentItem({
   );
 }
 
-function Composer({ taskId, me, people }: { taskId: string; me: UserSummary | undefined; people: UserSummary[] }) {
+function Composer({ taskId, taskTitle, me, people }: { taskId: string; taskTitle: string; me: UserSummary | undefined; people: UserSummary[] }) {
   const create = useCreateComment(taskId, me);
   const editor = useRef<RichTextEditorHandle>(null);
   const [empty, setEmpty] = useState(true);
   const [focused, setFocused] = useState(false);
+  const upload = useUploadAttachment(taskId);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [pending, setPending] = useState(0);
+  const [dragging, setDragging] = useState(false);
+
+  /** Files go to the task's Files list, so everyone on the project can open them. */
+  function attach(files: File[]) {
+    for (const file of files) {
+      const problem = checkAttachment(file);
+      if (problem) {
+        toast.error("That file can't be attached", { description: problem });
+        continue;
+      }
+      setPending((n) => n + 1);
+      upload.mutate(file, {
+        onSuccess: () => toast.success(`Attached ${file.name} to this task`),
+        onError: (e) => toast.error(`Couldn't upload ${file.name}`, { description: e instanceof Error && !("code" in e) ? e.message : `${errorMessage(e)} Try again.` }),
+        onSettled: () => setPending((n) => n - 1),
+      });
+    }
+  }
 
   function submit() {
     const body = editor.current?.getJSON();
@@ -230,7 +257,26 @@ function Composer({ taskId, me, people }: { taskId: string; me: UserSummary | un
         className={cn(
           "min-w-0 flex-1 rounded-md border bg-surface px-3 py-2 transition-[border-color,box-shadow] duration-[var(--dur-fast)]",
           focused ? "border-ring ring-[3px] ring-[color-mix(in_srgb,var(--ring)_22%,transparent)]" : "border-border-strong",
+          dragging && "border-dashed border-ring bg-accent-subtle",
         )}
+        onPaste={(e) => {
+          const files = [...e.clipboardData.files];
+          if (!files.length) return;
+          e.preventDefault();
+          attach(files);
+        }}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setDragging(false)}
+        onDrop={(e) => {
+          if (!e.dataTransfer.files.length) return;
+          e.preventDefault();
+          setDragging(false);
+          attach([...e.dataTransfer.files]);
+        }}
         onFocus={() => setFocused(true)}
         onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setFocused(false)}
       >
@@ -244,8 +290,29 @@ function Composer({ taskId, me, people }: { taskId: string; me: UserSummary | un
           onChange={(doc) => setEmpty(isEmptyDoc(doc))}
           onSubmit={submit}
         />
-        <div className={cn("flex items-center justify-end gap-2 pt-1", !focused && empty && "hidden")}>
-          <span className="hidden items-center gap-1 text-12 text-fg-faint sm:flex">
+        <div className="flex items-center justify-end gap-1 pt-1">
+          <IconButton label="Attach files to this task" size="sm" onClick={() => fileInput.current?.click()}>
+            <Paperclip aria-hidden />
+          </IconButton>
+          <RecordIconButton target={{ kind: "task", taskId, title: taskTitle }} label="Record screen for this task" className="size-7 [&_svg]:size-3.5" />
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            hidden
+            accept={ACCEPT}
+            onChange={(e) => {
+              attach([...(e.target.files ?? [])]);
+              e.target.value = "";
+            }}
+          />
+          {pending > 0 && (
+            <span role="status" className="flex items-center gap-1.5 px-1 text-12 text-fg-muted">
+              <Spinner label="Uploading" /> Uploading {pending} {pending === 1 ? "file" : "files"}
+            </span>
+          )}
+          <span className="flex-1" />
+          <span className={cn("hidden items-center gap-1 text-12 text-fg-faint sm:flex", !focused && empty && "sm:hidden")}>
             <Kbd>Ctrl</Kbd>
             <Kbd>Enter</Kbd>
           </span>

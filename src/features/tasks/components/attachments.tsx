@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, File, FileImage, FileSpreadsheet, FileText, FileVideo, FileArchive, Paperclip, Trash2, Upload } from "lucide-react";
+import { Download, Paperclip, Play, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { errorMessage } from "@/lib/api/client";
 import type { Attachment, UserSummary } from "@/lib/api/types";
@@ -9,32 +9,23 @@ import { ConfirmDialog } from "@/ui/dialog";
 import { IconButton } from "@/ui/icon-button";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toaster";
-import { ATTACHMENT_MIME, checkAttachment, downloadAttachment, useDeleteAttachment, useUploadAttachment } from "../api";
+import { PlayerDialog } from "@/features/files/media-player";
+import { FileTypeTile, isPlayable, RecordingMeta } from "@/features/files/parts";
+import { RecordButton } from "@/features/recorder/record-button";
+import { ACCEPT, formatBytes } from "@/lib/files/limits";
+import { checkAttachment, downloadAttachment, useDeleteAttachment, useUploadAttachment } from "../api";
 import { relativeTime } from "../lib/dates";
-
-function iconFor(mime: string) {
-  if (mime.startsWith("image/")) return FileImage;
-  if (mime.startsWith("video/")) return FileVideo;
-  if (mime === "application/zip") return FileArchive;
-  if (mime.includes("sheet") || mime.includes("excel") || mime === "text/csv") return FileSpreadsheet;
-  if (mime === "application/pdf" || mime.includes("word") || mime === "text/plain") return FileText;
-  return File;
-}
-
-export function formatBytes(n: number) {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
-}
 
 export function Attachments({
   taskId,
+  taskTitle,
   attachments,
   me,
   canUpload,
   canManage,
 }: {
   taskId: string;
+  taskTitle: string;
   attachments: Attachment[];
   me: UserSummary | undefined;
   canUpload: boolean;
@@ -47,6 +38,7 @@ export function Attachments({
   const [dragOver, setDragOver] = useState(false);
   const [confirm, setConfirm] = useState<Attachment | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [playing, setPlaying] = useState<Attachment | null>(null);
 
   function send(files: FileList | File[]) {
     for (const file of Array.from(files)) {
@@ -82,6 +74,12 @@ export function Attachments({
 
   return (
     <div
+      onPaste={(e) => {
+        const files = [...e.clipboardData.files];
+        if (!canUpload || files.length === 0) return;
+        e.preventDefault();
+        send(files);
+      }}
       onDragOver={(e) => {
         if (!canUpload || !e.dataTransfer.types.includes("Files")) return;
         e.preventDefault();
@@ -99,22 +97,28 @@ export function Attachments({
       {!empty && (
         <ul className="flex flex-col">
           {attachments.map((a) => {
-            const Icon = iconFor(a.mime);
             const removable = canManage || (canUpload && a.uploader?.id === me?.id);
+            const playable = isPlayable(a.mime);
             return (
-              <li key={a.id} className="group/a flex h-11 items-center gap-2.5 rounded-sm px-1.5 hover:bg-surface-sunken">
-                <Icon className="size-4 shrink-0 text-fg-faint" aria-hidden />
+              <li key={a.id} className="group/a flex min-h-11 items-center gap-2.5 rounded-sm px-1.5 py-1 hover:bg-surface-sunken">
+                <FileTypeTile a={a} className="size-7 [&_svg]:size-4" />
                 <button
                   type="button"
-                  onClick={() => void download(a)}
-                  className="min-w-0 flex-1 truncate text-left text-13 text-fg hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-                  title={`Download ${a.filename}`}
+                  onClick={() => (playable ? setPlaying(a) : void download(a))}
+                  className="min-w-0 flex-1 text-left focus-visible:outline-2 focus-visible:outline-ring"
+                  title={`${playable ? "Open" : "Download"} ${a.filename}`}
                 >
-                  {a.filename}
+                  <span className="block truncate text-13 text-fg hover:underline">{a.filename}</span>
+                  {a.kind === "recording" && <RecordingMeta a={a} className="-mt-0.5" />}
                 </button>
                 <span className="hidden shrink-0 text-12 text-fg-faint sm:inline tabular">
                   {formatBytes(a.size_bytes)}, {relativeTime(a.created_at)}
                 </span>
+                {playable && !a.mime.startsWith("image/") && (
+                  <IconButton label={`Play ${a.filename}`} size="sm" onClick={() => setPlaying(a)}>
+                    <Play aria-hidden />
+                  </IconButton>
+                )}
                 {downloading === a.id ? (
                   <Spinner className="text-fg-faint" label="Preparing download" />
                 ) : (
@@ -140,21 +144,29 @@ export function Attachments({
         </ul>
       )}
       {canUpload ? (
+        <div className={cn("flex items-stretch gap-2", !empty && "mt-1.5")}>
         <button
           type="button"
           onClick={() => input.current?.click()}
           className={cn(
             "flex w-full items-center gap-2 rounded-sm border border-dashed border-border-strong px-3 text-left text-13 text-fg-muted",
             "hover:border-fg-faint hover:bg-surface-sunken hover:text-fg focus-visible:outline-2 focus-visible:outline-ring",
-            empty ? "h-14" : "mt-1.5 h-9",
+            "min-w-0 flex-1",
+            empty ? "h-14" : "h-9",
           )}
         >
           <Upload className="size-4 text-fg-faint" aria-hidden />
           <span>
             {empty ? "Drop files here or choose files" : "Add files"}
-            <span className="ml-1.5 text-12 text-fg-faint">Up to 25 MB each</span>
+            <span className="ml-1.5 text-12 text-fg-faint">Up to 25 MB each, video and audio 100 MB</span>
           </span>
         </button>
+        <RecordButton
+          target={{ kind: "task", taskId, title: taskTitle }}
+          size="md"
+          className={cn("shrink-0 self-center", empty && "h-14 self-stretch")}
+        />
+        </div>
       ) : (
         empty && (
           <p className="flex h-9 items-center gap-2 px-1.5 text-13 text-fg-faint">
@@ -167,12 +179,13 @@ export function Attachments({
         type="file"
         multiple
         hidden
-        accept={[...ATTACHMENT_MIME, ".csv", ".mov"].join(",")}
+        accept={ACCEPT}
         onChange={(e) => {
           if (e.target.files?.length) send(e.target.files);
           e.target.value = "";
         }}
       />
+      <PlayerDialog a={playing} onOpenChange={(o) => !o && setPlaying(null)} />
       <ConfirmDialog
         open={Boolean(confirm)}
         onOpenChange={(o) => !o && setConfirm(null)}

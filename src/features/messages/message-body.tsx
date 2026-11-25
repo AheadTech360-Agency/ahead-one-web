@@ -1,11 +1,13 @@
 "use client";
 
-import { Download, FileArchive, FileSpreadsheet, FileText, FileVideo, File as FileIcon, ImageOff } from "lucide-react";
+import { Download, Play, FileArchive, FileSpreadsheet, FileText, FileVideo, File as FileIcon, ImageOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/api/client";
 import type { Attachment } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { toast } from "@/ui/toaster";
+import { MediaPlayer } from "@/features/files/media-player";
+import { RecordingMeta } from "@/features/files/parts";
 import { fetchAttachmentUrl, useAttachmentUrl } from "./api";
 import { displayName, formatBytes, parseBody, type People } from "./format";
 
@@ -152,10 +154,57 @@ function FileCard({ a }: { a: Attachment }) {
   );
 }
 
+/**
+ * Video and audio play in place. The signed URL is only requested on click: opening a file restarts its
+ * retention clock, so scrolling past a message must not.
+ */
+function MediaCard({ a }: { a: Attachment }) {
+  const [playing, setPlaying] = useState(false);
+  const video = a.mime.startsWith("video/");
+  if (playing) {
+    return (
+      <div className="flex w-full max-w-[480px] flex-col gap-1">
+        <MediaPlayer a={a} autoPlay />
+        <span className="flex items-center gap-2 text-11 text-fg-faint tabular">
+          <span className="min-w-0 truncate">{a.filename}</span>
+          <span>{formatBytes(a.size_bytes)}</span>
+          <RecordingMeta a={a} />
+          <button type="button" onClick={() => void download(a)} className="ml-auto inline-flex items-center gap-1 text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-ring">
+            <Download className="size-3" aria-hidden /> Download
+          </button>
+        </span>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => setPlaying(true)}
+      aria-label={`Play ${a.filename}`}
+      data-testid="chat-media"
+      className="group/media flex h-14 w-72 max-w-full items-center gap-3 overflow-hidden rounded-md border border-border bg-surface pr-3 text-left hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      <span className={cn("flex h-full w-14 shrink-0 items-center justify-center", a.kind === "recording" ? "bg-band text-band-fg" : "bg-surface-sunken text-fg-muted")}>
+        <span className="inline-flex size-8 items-center justify-center rounded-full bg-green text-navy-deep transition-transform duration-[var(--dur-fast)] motion-safe:group-hover/media:scale-105">
+          <Play className="size-3.5" fill="currentColor" aria-hidden />
+        </span>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-13 font-medium text-fg">{a.filename}</span>
+        <span className="flex items-center gap-2 text-11 text-fg-faint tabular">
+          {video ? "Video" : "Audio"}, {formatBytes(a.size_bytes)}
+          <RecordingMeta a={a} />
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export function Attachments({ items }: { items: Attachment[] }) {
   if (items.length === 0) return null;
   const images = items.filter((a) => a.mime.startsWith("image/"));
-  const files = items.filter((a) => !a.mime.startsWith("image/"));
+  const media = items.filter((a) => a.mime.startsWith("video/") || a.mime.startsWith("audio/"));
+  const files = items.filter((a) => !a.mime.startsWith("image/") && !a.mime.startsWith("video/") && !a.mime.startsWith("audio/"));
   return (
     <div className="mt-1.5 flex flex-col gap-1.5">
       {images.length > 0 && (
@@ -165,6 +214,9 @@ export function Attachments({ items }: { items: Attachment[] }) {
           ))}
         </div>
       )}
+      {media.map((a) => (
+        <MediaCard key={a.id} a={a} />
+      ))}
       {files.map((a) => (
         <FileCard key={a.id} a={a} />
       ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, CircleAlert, Hash, Info, Lock, RotateCw, Users, WifiOff } from "lucide-react";
+import { ChevronLeft, CircleAlert, FolderOpen, Hash, Info, Lock, RotateCw, Users, WifiOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +16,7 @@ import { toast } from "@/ui/toaster";
 import { useRealtimeStatus } from "@/features/realtime/provider";
 import { useChannelMembers, useConversation, useJoinChannel, useMarkRead, useMessages, useReadStates, useSendMessage } from "./api";
 import { newer } from "./cache";
+import { ConversationFiles } from "@/features/files/conversation-files";
 import { ChannelDetails } from "./channel-details";
 import { Composer, type ComposerHandle } from "./composer";
 import { conversationLabel, conversationName, dmPartner } from "./format";
@@ -35,7 +36,7 @@ function ConnectionNote() {
   );
 }
 
-function Header({ c, meId, onDetails }: { c: Conversation; meId?: string; onDetails: () => void }) {
+function Header({ c, meId, onDetails, onFiles }: { c: Conversation; meId?: string; onDetails: () => void; onFiles: () => void }) {
   const partner = c.kind === "dm" ? dmPartner(c, meId) : undefined;
   return (
     <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border-subtle px-2 sm:px-4">
@@ -72,6 +73,11 @@ function Header({ c, meId, onDetails }: { c: Conversation; meId?: string; onDeta
         </p>
       </div>
       <ConnectionNote />
+      {c.is_member && (
+        <IconButton label="Files in this conversation" onClick={onFiles}>
+          <FolderOpen aria-hidden />
+        </IconButton>
+      )}
       {c.kind === "channel" && (
         <>
           <button
@@ -122,6 +128,7 @@ function Loaded({ c }: { c: Conversation }) {
   const { me } = useWorkspace();
   const meId = me?.user.id;
   const [details, setDetails] = useState(false);
+  const [filesOpen, setFilesOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const composer = useRef<ComposerHandle>(null);
@@ -188,7 +195,7 @@ function Loaded({ c }: { c: Conversation }) {
         composer.current?.addFiles([...e.dataTransfer.files]);
       }}
     >
-      <Header c={c} meId={meId} onDetails={() => setDetails(true)} />
+      <Header c={c} meId={meId} onDetails={() => setDetails(true)} onFiles={() => setFilesOpen(true)} />
       {c.is_member ? (
         <>
           <MessageList
@@ -215,6 +222,7 @@ function Loaded({ c }: { c: Conversation }) {
               meId={meId}
               autoFocus
               placeholder={`Message ${conversationLabel(c, meId)}`}
+              recordLabel={conversationLabel(c, meId)}
               onEditLast={lastMine ? () => setEditingId(lastMine.id) : undefined}
               onSubmit={(body, attachments) => {
                 void send.send(body, attachments).catch((e) =>
@@ -229,6 +237,7 @@ function Loaded({ c }: { c: Conversation }) {
       ) : c.kind === "channel" && !c.is_private ? (
         <JoinPanel c={c} />
       ) : null}
+      {c.is_member && <ConversationFiles c={c} open={filesOpen} onOpenChange={setFilesOpen} />}
       {c.kind === "channel" && <ChannelDetails c={c} open={details} onOpenChange={setDetails} />}
     </div>
   );

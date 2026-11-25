@@ -19,6 +19,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { api, errorMessage } from "@/lib/api/client";
+import { ALLOWED_MIME, checkFile, mimeForFile } from "@/lib/files/limits";
 import { qk } from "@/lib/api/keys";
 import type {
   Activity,
@@ -686,64 +687,15 @@ export function useActivity(taskId: string | undefined, enabled = true) {
 
 /* ---------- Attachments ---------- */
 
-/** Mirrors ALLOWED_MIME and MAX_UPLOAD_BYTES in the API's storage module. */
-export const ATTACHMENT_MIME = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "text/plain",
-  "text/csv",
-  "application/zip",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "video/mp4",
-  "video/quicktime",
-] as const;
-export const ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
-
-const EXT_MIME: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  pdf: "application/pdf",
-  txt: "text/plain",
-  csv: "text/csv",
-  zip: "application/zip",
-  doc: "application/msword",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xls: "application/vnd.ms-excel",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ppt: "application/vnd.ms-powerpoint",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  mp4: "video/mp4",
-  mov: "video/quicktime",
-};
-
-/** Browsers report some types inconsistently (csv on Windows, zip variants); fall back to the extension. */
+/** Upload rules are shared with chat and the recorder: see lib/files/limits.ts (mirrors the API). */
 export function attachmentMime(file: File): string | null {
-  const t = file.type;
-  if ((ATTACHMENT_MIME as readonly string[]).includes(t)) return t;
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return EXT_MIME[ext] ?? null;
+  const m = mimeForFile(file);
+  return ALLOWED_MIME.includes(m) ? m : null;
 }
 
 /** Client-side check that matches the server. Returns a friendly error or null. */
 export function checkAttachment(file: File): string | null {
-  if (!attachmentMime(file)) {
-    return `${file.name} can't be attached. Use an image, PDF, Office document, CSV, text, ZIP, MP4 or MOV file.`;
-  }
-  if (file.size <= 0) return `${file.name} is empty.`;
-  if (file.size > ATTACHMENT_MAX_BYTES) return `${file.name} is over 25 MB. Compress it or share a link instead.`;
-  if (file.name.length > 255 || /[\\/\0]/.test(file.name)) return `Rename ${file.name} to something shorter, without slashes.`;
-  return null;
+  return checkFile(file);
 }
 
 export function useUploadAttachment(taskId: string) {

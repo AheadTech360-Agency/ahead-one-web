@@ -20,8 +20,10 @@ import { Button } from "@/ui/button";
 import { IconButton } from "@/ui/icon-button";
 import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toaster";
+import { RecordIconButton } from "@/features/recorder/record-button";
 import { useRealtimeSend } from "@/features/realtime/provider";
-import { ALLOWED_MIME, checkFile, MAX_ATTACHMENTS, uploadAttachment } from "./api";
+import { ACCEPT, checkFile } from "@/lib/files/limits";
+import { MAX_ATTACHMENTS, uploadAttachment } from "./api";
 import { displayName, encodeMentions, formatBytes } from "./format";
 
 const MAX_LEN = 4000;
@@ -48,6 +50,8 @@ type Props = {
   candidates: UserSummary[];
   meId?: string;
   placeholder: string;
+  /** Where a screen recording made from here is going, e.g. "#launch". Omit to hide the record button. */
+  recordLabel?: string;
   mode?: "new" | "edit";
   initialText?: string;
   initialMentions?: Map<string, string>;
@@ -73,6 +77,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     candidates,
     meId,
     placeholder,
+    recordLabel,
     mode = "new",
     initialText,
     initialMentions,
@@ -158,7 +163,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
       const accepted: File[] = [];
       for (const f of files.slice(0, room)) {
         const problem = checkFile(f);
-        if (problem) toast.error(problem, { description: "Use images, PDFs, Office files, text, zip or video up to 25 MB." });
+        if (problem) toast.error(problem, { description: "Files up to 25 MB, video and audio up to 100 MB." });
         else accepted.push(f);
       }
       if (files.length > room) toast.error(`Only the first ${room} files were added. Messages hold up to ${MAX_ATTACHMENTS}.`);
@@ -433,12 +438,19 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 type="file"
                 multiple
                 hidden
-                accept={[...ALLOWED_MIME].join(",")}
+                accept={ACCEPT}
                 onChange={(e) => {
                   addFiles([...(e.target.files ?? [])]);
                   e.target.value = "";
                 }}
               />
+              {recordLabel && (
+                <RecordIconButton
+                  label="Record screen"
+                  className="size-7 [&_svg]:size-3.5"
+                  target={{ kind: "chat", label: recordLabel, onFile: (f) => addFiles([f]) }}
+                />
+              )}
               <IconButton
                 label="Mention someone"
                 size="sm"

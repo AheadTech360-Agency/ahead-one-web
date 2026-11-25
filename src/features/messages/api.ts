@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiRequestError } from "@/lib/api/client";
 import { chatKeys } from "@/lib/api/keys";
+import { mimeForFile } from "@/lib/files/limits";
 import type {
   Attachment,
   Conversation,
@@ -240,63 +241,7 @@ export function useMarkRead() {
 
 /* ---------- Attachments ---------- */
 
-/** Mirrors ALLOWED_MIME and MAX_UPLOAD_BYTES in crates/platform/src/storage.rs. */
-export const ALLOWED_MIME = new Set([
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "text/plain",
-  "text/csv",
-  "application/zip",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "video/mp4",
-  "video/quicktime",
-]);
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 export const MAX_ATTACHMENTS = 10;
-
-/** Browsers leave `type` empty for some files; fall back on the extension. */
-const BY_EXT: Record<string, string> = {
-  png: "image/png",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  gif: "image/gif",
-  webp: "image/webp",
-  pdf: "application/pdf",
-  txt: "text/plain",
-  csv: "text/csv",
-  zip: "application/zip",
-  doc: "application/msword",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xls: "application/vnd.ms-excel",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ppt: "application/vnd.ms-powerpoint",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  mp4: "video/mp4",
-  mov: "video/quicktime",
-};
-
-export function mimeOf(file: File) {
-  if (file.type) return file.type === "application/x-zip-compressed" ? "application/zip" : file.type;
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  return BY_EXT[ext] ?? "";
-}
-
-/** Client-side check before asking for an upload URL. Returns a reason, or null when fine. */
-export function checkFile(file: File): string | null {
-  if (!ALLOWED_MIME.has(mimeOf(file))) return `${file.name} isn't a supported file type.`;
-  if (file.size <= 0) return `${file.name} is empty.`;
-  if (file.size > MAX_UPLOAD_BYTES) return `${file.name} is over the 25 MB limit.`;
-  if (/[/\\\0]/.test(file.name) || file.name.length > 255) return `Rename ${file.name} and try again.`;
-  return null;
-}
 
 function putWithProgress(url: string, file: File, mime: string, onProgress: (f: number) => void, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
@@ -322,7 +267,7 @@ export async function uploadAttachment(
   onProgress: (fraction: number) => void,
   signal: AbortSignal,
 ): Promise<Attachment> {
-  const mime = mimeOf(file);
+  const mime = mimeForFile(file);
   const ticket = await api<UploadTicket>(`/v1/conversations/${conversationId}/attachments/upload-url`, {
     method: "POST",
     body: { filename: file.name, mime, size_bytes: file.size },
@@ -344,7 +289,7 @@ export function useAttachmentUrl(id: string, enabled: boolean) {
   });
 }
 
-export function fetchAttachmentUrl(id: string) {
-  return api<DownloadUrl>(`/v1/attachments/${id}/download-url`);
+export function fetchAttachmentUrl(id: string, inline = false) {
+  return api<DownloadUrl>(`/v1/attachments/${id}/download-url`, { query: inline ? { inline: true } : undefined });
 }
 

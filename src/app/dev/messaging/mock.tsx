@@ -86,8 +86,8 @@ const launchMessages: Message[] = [
   msg(C_LAUNCH, MAYA, 61, "Two open items before we cut the build:\n1. SSO redirect on Safari\n2. The invoice export timeout", { edited_at: at(58) }),
   msg(C_LAUNCH, MAYA, 60, "", {
     attachments: [
-      { id: "f1", filename: "release-notes-v2.4.pdf", mime: "application/pdf", size_bytes: 482_000, uploader: MAYA, created_at: at(60) },
-      { id: "f2", filename: "qa-checklist.xlsx", mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", size_bytes: 61_400, uploader: MAYA, created_at: at(60) },
+      { id: "f1", filename: "release-notes-v2.4.pdf", mime: "application/pdf", size_bytes: 482_000, uploader: MAYA, created_at: at(60), kind: "file", duration_secs: null, has_audio: null },
+      { id: "f2", filename: "qa-checklist.xlsx", mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", size_bytes: 61_400, uploader: MAYA, created_at: at(60), kind: "file", duration_secs: null, has_audio: null },
     ],
   }),
   msg(C_LAUNCH, TOMAS, 40, `I'll take the Safari redirect. <@${MAYA.id}> is the export timeout the one from last sprint?`),

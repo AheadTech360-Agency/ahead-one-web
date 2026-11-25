@@ -195,9 +195,10 @@ function DetailBody({
       <Section title="Files" count={detail.attachments.length}>
         <Attachments
           taskId={task.id}
+          taskTitle={task.title}
           attachments={detail.attachments}
           me={me}
-          canUpload={access.canEdit}
+          canUpload={access.canComment}
           canManage={access.canManage}
         />
       </Section>
@@ -213,6 +214,7 @@ function DetailBody({
         <TabsContent value="comments" className="outline-none">
           <CommentsThread
             taskId={task.id}
+            taskTitle={task.title}
             me={me}
             people={people}
             canComment={access.canComment}
