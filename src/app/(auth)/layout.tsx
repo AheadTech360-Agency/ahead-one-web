@@ -23,7 +23,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <p className="text-12 text-band-dim">AheadTech360 internal workspace. Access is by invitation only.</p>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-[12vh]">
+        <main className="flex flex-1 items-center justify-center px-4 py-10">
           <div className="w-full max-w-[380px]">
             <div className="mb-6 flex items-center gap-2.5 lg:hidden">
               <BrandMark className="size-7" />
