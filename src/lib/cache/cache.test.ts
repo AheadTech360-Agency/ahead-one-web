@@ -18,6 +18,23 @@ const ok = (queryKey: unknown[], data: unknown = {}, extra: object = {}) => ({
   ...extra,
 });
 
+describe("app release is never persisted", () => {
+  it("refuses both app-release keys and an opted-out query", () => {
+    const keys = [
+      ["ws", "w1", "app-release", "android"],
+      ["ws", "w1", "app-release", "android", "download"],
+    ];
+    for (const key of keys) {
+      assert.equal(isPersistableKey(key), false);
+      assert.equal(shouldPersistQuery(ok(key, { version_name: "1.0.0" })), false);
+      assert.equal(shouldPersistQuery(ok(key, {}, { meta: { persist: true } })), false);
+    }
+  });
+  it("treats a payload with download_url as secret", () => {
+    assert.equal(hasSecretShape({ download_url: "https://x.r2.cloudflarestorage.com/a" }), true);
+  });
+});
+
 describe("persisted key allowlist", () => {
   it("allows the stable, user-facing resources", () => {
     for (const key of [

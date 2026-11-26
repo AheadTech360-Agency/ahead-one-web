@@ -2,6 +2,7 @@
 
 import {
   keepPreviousData,
+  type QueryClient,
   queryOptions,
   useInfiniteQuery,
   useMutation,
@@ -11,7 +12,7 @@ import {
 import { STALE } from "@/lib/cache/stale";
 import { api } from "./client";
 import { qk } from "./keys";
-import type { AcceptInvite, AuditEntry, ChangePassword, Conversation, CreateInvite, ForgotPassword, Invite, InvitePreview, List, MeResponse, Member, Membership, Notification, NotificationChannels, NotificationPrefs, Page, Profile, Project, RegisterInvite, ResetPassword, Role, SetTwoFactor, Space, TestNotificationResult, TreeSpace, UnreadCount, UpdateMe } from "./types";
+import type { AcceptInvite, AppRelease, AuditEntry, ChangePassword, Conversation, CreateInvite, ForgotPassword, Invite, InvitePreview, List, MeResponse, Member, Membership, Notification, NotificationChannels, NotificationPrefs, Page, Profile, Project, RegisterInvite, ResetPassword, Role, SetTwoFactor, Space, TestNotificationResult, TreeSpace, UnreadCount, UpdateMe } from "./types";
 
 /* ---------- Me ---------- */
 
@@ -339,5 +340,50 @@ export function useSendTestNotification() {
   return useMutation({
     mutationFn: () => api<TestNotificationResult>("/v1/notifications/test", { method: "POST" }),
     onSettled: () => qc.invalidateQueries({ queryKey: qk.notifications.channels() }),
+  });
+}
+
+/* ---------- Android app release ---------- */
+
+/** Release facts for display. The signed link is dropped here, so it is never rendered, cached or persisted from this query. */
+export type AppReleaseInfo = Omit<AppRelease, "download_url" | "expires_at">;
+
+export const appReleaseOptions = (ws: string | undefined) =>
+  queryOptions({
+    queryKey: qk.workspace(ws ?? "").appRelease(),
+    queryFn: async ({ signal }): Promise<AppReleaseInfo> => {
+      const r = await api<AppRelease>(`/v1/workspaces/${ws}/app/releases/android/latest`, { signal });
+      return {
+        version_name: r.version_name,
+        version_code: r.version_code,
+        notes: r.notes,
+        size_bytes: r.size_bytes,
+        sha256: r.sha256,
+        updated_at: r.updated_at,
+      };
+    },
+    staleTime: STALE.SEMI,
+    refetchOnWindowFocus: false,
+    meta: { persist: false },
+  });
+
+/** `enabled` must be false for guests: the endpoint is not requested for them at all. */
+export function useAppRelease(ws: string | undefined, enabled: boolean) {
+  return useQuery({ ...appReleaseOptions(ws), enabled: enabled && !!ws });
+}
+
+/**
+ * A FRESH signed download link (valid 15 minutes). Always hits the API (staleTime 0) and is dropped from memory
+ * at once (gcTime 0, never persisted). The caller navigates to it straight away and never stores or logs it.
+ */
+export function fetchFreshDownloadUrl(qc: QueryClient, ws: string): Promise<string> {
+  return qc.fetchQuery({
+    queryKey: qk.workspace(ws).appReleaseDownload(),
+    queryFn: async ({ signal }) =>
+      (await api<AppRelease>(`/v1/workspaces/${ws}/app/releases/android/latest`, { signal })).download_url,
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+    meta: { persist: false },
   });
 }

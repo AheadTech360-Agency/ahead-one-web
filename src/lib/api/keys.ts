@@ -28,6 +28,9 @@ export const qk = {
     filesAll: () => ["ws", ws, "files"] as const,
     files: (filters: object) => ["ws", ws, "files", "list", filters] as const,
     filesSummary: () => ["ws", ws, "files", "summary"] as const,
+    /** Never persisted (see lib/cache/policy.ts). The download key carries a signed URL. */
+    appRelease: () => ["ws", ws, "app-release", "android"] as const,
+    appReleaseDownload: () => ["ws", ws, "app-release", "android", "download"] as const,
   }),
 };
 

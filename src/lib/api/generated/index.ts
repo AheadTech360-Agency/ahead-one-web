@@ -5,6 +5,7 @@ export type * from "./Activity";
 export type * from "./ActivityFeedItem";
 export type * from "./ApiErrorBody";
 export type * from "./ApiErrorDetail";
+export type * from "./AppRelease";
 export type * from "./AttachToTask";
 export type * from "./Attachment";
 export type * from "./AttachmentKind";

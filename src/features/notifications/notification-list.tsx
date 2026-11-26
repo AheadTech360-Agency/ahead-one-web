@@ -11,6 +11,7 @@ import {
   MessageSquare,
   MessagesSquare,
   RotateCw,
+  Smartphone,
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
@@ -35,6 +36,7 @@ export const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   task_due_soon: CalendarClock,
   task_overdue: CircleAlert,
   direct_message: MessagesSquare,
+  app_update: Smartphone,
 };
 
 export const KIND_LABEL: Record<NotificationKind, string> = {
@@ -44,6 +46,7 @@ export const KIND_LABEL: Record<NotificationKind, string> = {
   task_due_soon: "Due soon",
   task_overdue: "Overdue",
   direct_message: "Message",
+  app_update: "App update",
 };
 
 /** Due dates are the only kinds that carry colour: they ask for action. */

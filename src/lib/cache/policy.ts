@@ -40,6 +40,7 @@ export function isPersistableKey(key: Key): boolean {
       if (typeof third !== "string") return false;
       if (WS_KINDS.has(third)) return true;
       // Files: only the small summary card, never the list (which carries per-file metadata).
+      // The app-release keys (release metadata and its signed download link) are deliberately NOT here.
       return third === "files" && fourth === "summary";
     case "project":
       // ["project", id], ["project", id, "members"], ["project", id, "lists"]

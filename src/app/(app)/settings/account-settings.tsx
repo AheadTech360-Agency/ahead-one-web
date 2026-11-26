@@ -275,7 +275,8 @@ function ThemePreview({ kind }: { kind: string }) {
 
 /* ---------- Notifications ---------- */
 
-const KIND_LABEL: Record<NotificationKind, { label: string; line: string }> = {
+/** `app_update` is always on and not listed in the preferences. */
+const KIND_LABEL: Record<Exclude<NotificationKind, "app_update">, { label: string; line: string }> = {
   task_assigned: { label: "Assigned to me", line: "Someone assigns you a task" },
   mentioned: { label: "Mentions", line: "Someone @mentions you" },
   task_comment: { label: "Comments", line: "New comments on tasks you follow" },
@@ -349,14 +350,14 @@ function NotificationPrefsForm({ initial }: { initial: NotificationPrefs }) {
           {prefs.prefs.map((p, i) => (
             <tr key={p.kind} className="border-b border-border-subtle">
               <th scope="row" className="py-2.5 text-left font-normal">
-                <span className="block font-medium text-fg">{KIND_LABEL[p.kind]?.label ?? p.kind}</span>
-                <span className="block text-12 text-fg-muted">{KIND_LABEL[p.kind]?.line}</span>
+                <span className="block font-medium text-fg">{(KIND_LABEL as Partial<Record<NotificationKind, { label: string; line: string }>>)[p.kind]?.label ?? p.kind}</span>
+                <span className="block text-12 text-fg-muted">{(KIND_LABEL as Partial<Record<NotificationKind, { label: string; line: string }>>)[p.kind]?.line}</span>
               </th>
               {channels.map((c) => (
                 <td key={c.key} className="text-center">
                   <span className="inline-flex">
                     <Checkbox
-                      aria-label={`${KIND_LABEL[p.kind]?.label ?? p.kind}: ${c.label}`}
+                      aria-label={`${(KIND_LABEL as Partial<Record<NotificationKind, { label: string; line: string }>>)[p.kind]?.label ?? p.kind}: ${c.label}`}
                       checked={p[c.key]}
                       onCheckedChange={(v) =>
                         commit({

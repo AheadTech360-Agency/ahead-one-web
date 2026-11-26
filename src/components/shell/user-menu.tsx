@@ -1,8 +1,9 @@
 "use client";
 
-import { Keyboard, LogOut, Monitor, Moon, Sun, UserRound } from "lucide-react";
+import { Keyboard, LogOut, Monitor, Moon, Smartphone, Sun, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { canSeeAppRelease } from "@/lib/app-release/format";
 import { signOut } from "@/lib/auth/client";
 import { useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
@@ -22,7 +23,7 @@ import {
 import { useShell } from "./shell-context";
 
 export function UserMenu() {
-  const { me } = useWorkspace();
+  const { me, role } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const { setShortcutsOpen } = useShell();
   const user = me?.user;
@@ -52,6 +53,13 @@ export function UserMenu() {
             <UserRound aria-hidden /> Profile and settings
           </Link>
         </DropdownMenuItem>
+        {canSeeAppRelease(role) && (
+          <DropdownMenuItem asChild>
+            <Link href="/settings/android-app">
+              <Smartphone aria-hidden /> Get the Android app
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Sun aria-hidden className="dark:hidden" />

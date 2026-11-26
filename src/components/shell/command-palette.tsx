@@ -15,6 +15,7 @@ import {
   Plus,
   Search,
   Settings,
+  Smartphone,
   Sun,
   Users,
   FolderOpen,
@@ -29,6 +30,7 @@ import { useTree } from "@/lib/api/hooks";
 import type { Conversation } from "@/lib/api/types";
 import { useRecorder } from "@/features/recorder/provider";
 import { useSearch } from "@/features/tasks/api";
+import { canSeeAppRelease } from "@/lib/app-release/format";
 import { cn } from "@/lib/utils";
 import { roleAtLeast, useWorkspace } from "@/lib/workspace";
 import { Avatar } from "@/ui/avatar";
@@ -186,6 +188,11 @@ export function CommandPalette() {
                   <Command.Item className={itemClass} onSelect={() => go("/settings")}>
                     <Settings aria-hidden /> Settings
                   </Command.Item>
+                  {canSeeAppRelease(role) && (
+                    <Command.Item className={itemClass} onSelect={() => go("/settings/android-app")} value="get the android app apk download">
+                      <Smartphone aria-hidden /> Get the Android app
+                    </Command.Item>
+                  )}
                   {roleAtLeast(role, "admin") && (
                     <>
                       <Command.Item className={itemClass} onSelect={() => go("/settings/members")}>

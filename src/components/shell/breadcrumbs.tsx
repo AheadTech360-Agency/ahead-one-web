@@ -18,6 +18,7 @@ const STATIC: Record<string, Crumb[]> = {
   "/settings": [{ label: "Settings" }],
   "/settings/members": [{ label: "Settings", href: "/settings" }, { label: "Members" }],
   "/settings/audit-log": [{ label: "Settings", href: "/settings" }, { label: "Audit log" }],
+  "/settings/android-app": [{ label: "Settings", href: "/settings" }, { label: "Android app" }],
   "/dev/components": [{ label: "Component library" }],
 };
 

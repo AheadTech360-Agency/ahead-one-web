@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { canSeeAppRelease } from "@/lib/app-release/format";
 import { roleAtLeast, useWorkspace } from "@/lib/workspace";
 
 export function SettingsNav() {
@@ -11,7 +12,13 @@ export function SettingsNav() {
   const isAdmin = roleAtLeast(role, "admin");
 
   const groups = [
-    { title: "Account", items: [{ href: "/settings", label: "Profile and preferences" }] },
+    {
+      title: "Account",
+      items: [
+        { href: "/settings", label: "Profile and preferences" },
+        { href: "/settings/android-app", label: "Android app", hidden: !canSeeAppRelease(role) },
+      ].filter((i) => !i.hidden),
+    },
     {
       title: current?.workspace.name ?? "Workspace",
       items: [
