@@ -15,7 +15,7 @@ import { IconButton } from "@/ui/icon-button";
 import { toast } from "@/ui/toaster";
 import { useRealtimeStatus } from "@/features/realtime/provider";
 import { useChannelMembers, useConversation, useJoinChannel, useMarkRead, useMessages, useReadStates, useSendMessage } from "./api";
-import { newer } from "./cache";
+import { shouldMarkRead } from "./receipts";
 import { ConversationFiles } from "@/features/files/conversation-files";
 import { ChannelDetails } from "./channel-details";
 import { Composer, type ComposerHandle } from "./composer";
@@ -135,7 +135,7 @@ function Loaded({ c }: { c: Conversation }) {
   const send = useSendMessage(c.id);
   const markRead = useMarkRead();
   const messages = useMessages(c.id, c.is_member);
-  const readStates = useReadStates(c.id, c.is_member && c.kind === "dm");
+  const readStates = useReadStates(c.id, c.is_member);
   const channelMembers = useChannelMembers(c.id, c.is_member && c.kind === "channel");
   const candidates = useMemo(
     () => (c.kind === "dm" ? c.members : (channelMembers.data ?? [])),
@@ -158,20 +158,32 @@ function Loaded({ c }: { c: Conversation }) {
     return () => setActiveConversation(null);
   }, [c.id]);
 
-  // Read receipts: mark the newest message read while it is on screen and the window has focus.
+  // Read receipts: mark the newest message read while it is on screen, the tab is visible and the
+  // window has focus. Debounced so a burst of messages sends one request; monotonic (never backwards).
   const marked = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef({ c, newest, atBottom });
   useEffect(() => {
     latest.current = { c, newest, atBottom };
   });
   const check = useCallback(() => {
-    const { c: conv, newest: n, atBottom: bottom } = latest.current;
-    if (!n || !bottom || !conv.is_member) return;
-    if (document.visibilityState !== "visible" || !document.hasFocus()) return;
-    if (marked.current && !newer(n.id, marked.current)) return;
-    marked.current = n.id;
-    if (conv.unread_count === 0 && !newer(n.id, conv.last_read_message_id)) return;
-    markRead(conv.id, n.id);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      const { c: conv, newest: n, atBottom: bottom } = latest.current;
+      const ok = shouldMarkRead({
+        newestId: n?.id,
+        lastSent: marked.current,
+        serverRead: conv.last_read_message_id,
+        unread: conv.unread_count,
+        visible: document.visibilityState === "visible",
+        focused: document.hasFocus(),
+        atBottom: bottom,
+        isMember: conv.is_member,
+      });
+      if (!ok || !n) return;
+      marked.current = n.id;
+      markRead(conv.id, n.id);
+    }, 250);
   }, [markRead]);
   useEffect(() => {
     check();
@@ -182,6 +194,7 @@ function Loaded({ c }: { c: Conversation }) {
     return () => {
       window.removeEventListener("focus", check);
       document.removeEventListener("visibilitychange", check);
+      if (timer.current) clearTimeout(timer.current);
     };
   }, [check]);
 

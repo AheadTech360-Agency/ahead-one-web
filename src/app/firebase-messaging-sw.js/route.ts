@@ -8,6 +8,8 @@
  * an existing window or opens a new one at the app-relative `link`.
  */
 
+import { safeNext } from "@/lib/safe-next";
+
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
@@ -28,13 +30,12 @@ function targetFor(data, fallbackLink) {
   return fallbackLink;
 }
 
+// The app's own validator (src/lib/safe-next.ts), embedded so the worker and the app agree on what an internal link is.
+${safeNext.toString().replace(/^(async )?function\s*[\w$]*/, "function safeNext")}
+
 function appUrl(raw) {
-  try {
-    const url = new URL(raw || "/inbox", self.location.origin);
-    return url.origin === self.location.origin ? url.href : new URL("/inbox", self.location.origin).href;
-  } catch (e) {
-    return new URL("/inbox", self.location.origin).href;
-  }
+  // Same origin by construction: safeNext only returns a relative path, else the default.
+  return new URL(safeNext(raw, "/inbox"), self.location.origin).href;
 }
 
 self.addEventListener("push", (event) => {

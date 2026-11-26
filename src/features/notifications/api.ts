@@ -1,6 +1,7 @@
 "use client";
 
 import { safeNext } from "@/lib/safe-next";
+import { deepLink } from "./kinds";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api, errorMessage } from "@/lib/api/client";
@@ -47,6 +48,6 @@ export function useOpenNotification(after?: () => void) {
   return (n: Notification) => {
     if (!n.read_at) markRead.mutate(n.id);
     after?.();
-    router.push(safeLink(n.link));
+    router.push(deepLink(n.kind, n.link));
   };
 }

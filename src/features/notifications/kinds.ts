@@ -7,6 +7,8 @@
  * `npm run sync-types` brings them in they are part of NotificationKind and this alias is harmless.
  */
 
+import { safeNext } from "../../lib/safe-next.ts";
+
 export type PendingKind = "channel_message" | "task_status_changed" | "added_to_project" | "role_changed" | "member_joined";
 export type KnownKind =
   | "task_assigned"
@@ -33,7 +35,7 @@ export type KindInfo = {
 };
 
 const inbox = () => "/inbox";
-const chat = ({ conversationId }: { conversationId?: string | null }) => (conversationId ? `/messages/${conversationId}` : "/messages");
+const chat = ({ conversationId }: { conversationId?: string | null }) => (conversationId ? `/messages/${encodeURIComponent(conversationId)}` : "/messages");
 
 export const KIND_INFO: Record<KnownKind, KindInfo> = {
   direct_message: { label: "Message", title: "Direct messages", description: "New messages sent to you", group: "Messages", fallback: chat },
@@ -57,10 +59,10 @@ export function kindInfo(kind: string): KindInfo {
   return (KIND_INFO as Record<string, KindInfo | undefined>)[kind] ?? GENERIC;
 }
 
-/** App-relative `link` when it is a safe path, else the kind's fallback. */
+/** The server's `link` when `safeNext` accepts it (the app's one internal-link validator), else the kind's fallback. */
 export function deepLink(kind: string, link: string | null | undefined, conversationId?: string | null): string {
-  if (link && link.startsWith("/") && !link.startsWith("//") && !link.includes("\\")) return link;
-  return kindInfo(kind).fallback({ conversationId });
+  const fallback = kindInfo(kind).fallback({ conversationId });
+  return safeNext(link, fallback);
 }
 
 export type PrefRow = { kind: string; title?: string | null; description?: string | null; group?: string | null };

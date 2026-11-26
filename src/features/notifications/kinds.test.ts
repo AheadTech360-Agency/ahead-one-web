@@ -27,6 +27,10 @@ describe("notification kinds", () => {
     assert.equal(deepLink("channel_message", "https://evil.test/x", "c1"), "/messages/c1");
     assert.equal(deepLink("channel_message", "//evil.test", null), "/messages");
     assert.equal(deepLink("task_overdue", ""), "/my-tasks");
+    for (const bad of ["//evil.com", "/\\evil.com", "/%2f%2fevil", "https://evil", "javascript:alert(1)", "/\t/evil", "/..//evil", "/" + "a".repeat(3000)]) {
+      assert.equal(deepLink("channel_message", bad, "c1"), "/messages/c1", bad);
+    }
+    assert.equal(deepLink("direct_message", undefined, "a/b?c"), "/messages/a%2Fb%3Fc");
   });
   it("groups prefs in order and lets the API title win", () => {
     const g = groupPrefs([
