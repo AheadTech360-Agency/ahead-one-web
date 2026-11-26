@@ -2,4 +2,12 @@
 import type { Role } from "./Role";
 import type { UserSummary } from "./UserSummary";
 
-export type Member = { user: UserSummary, role: Role, joined_at: string, };
+export type Member = { user: UserSummary, role: Role, joined_at: string, 
+/**
+ * Owner view only, and only for Admins: false when the Admin is limited to some clients.
+ */
+all_clients?: boolean, 
+/**
+ * Owner view only, and only for Admins: the clients (space ids) a limited Admin may reach.
+ */
+space_ids?: Array<string>, };

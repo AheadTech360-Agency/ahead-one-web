@@ -4,7 +4,7 @@
  * app, and is therefore never in a production bundle.
  */
 import type { MeResponse, Member, Role, UserSummary } from "../src/lib/api/types";
-import type { ClientSummary, TeamDashboardData, TimelineTask } from "../src/features/team/contract";
+import type { ClientSummary, TeamDashboard, TimelineTask } from "../src/lib/api/types";
 
 export const WS = "00000000-0000-4000-8000-0000000000aa";
 
@@ -49,13 +49,13 @@ function at(dayOffset: number, hour = 17): string {
 const T = (n: number, title: string, day: number, client: ClientSummary, project: string, who: UserSummary[], priority: TimelineTask["priority"] = "normal"): TimelineTask => ({
   task_id: `20000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
   title,
-  due_at: at(day),
+  due_date: at(day).slice(0, 10),
+  status_name: "In progress",
   priority,
   project_id: `30000000-0000-4000-8000-${String(n % 5).padStart(12, "0")}`,
   project_name: project,
   space_id: client.space_id,
   space_name: client.name,
-  space_color: client.color,
   assignees: who,
 });
 
@@ -63,22 +63,22 @@ const [acme, birch, cedar, delta, ember, fjord] = CLIENTS as [ClientSummary, Cli
 const P = PEOPLE;
 
 export const TIMELINE_ALL = {
-  overdue: { total: 12, items: [
+  overdue: { total: 12, tasks: [
     T(1, "Reconcile Q3 carrier invoices", -6, acme, "Billing portal", [P.a], "urgent"),
     T(2, "Fix checkout address validation", -3, cedar, "Storefront rebuild", [P.b, P.c]),
     T(3, "Send revised retainer proposal", -2, delta, "Retainer renewal", []),
     T(4, "Publish trail guide landing page", -1, fjord, "Spring campaign", [P.d]),
   ] },
-  today: { total: 7, items: [
+  today: { total: 7, tasks: [
     T(5, "Review homepage hero copy", 0, birch, "Website refresh", [P.mgmt, P.e]),
     T(6, "Deploy tracking widget to staging", 0, acme, "Customer tracking", [P.c], "high"),
     T(7, "Record onboarding walkthrough", 0, ember, "Wholesale portal", [P.f]),
   ] },
-  tomorrow: { total: 5, items: [
+  tomorrow: { total: 5, tasks: [
     T(8, "Approve label artwork", 1, ember, "Packaging", [P.b]),
     T(9, "Weekly client status call prep", 1, delta, "Retainer renewal", [P.admin, P.a, P.b, P.c]),
   ] },
-  this_week: { total: 19, items: [
+  this_week: { total: 19, tasks: [
     T(10, "Migrate product images to CDN", 3, cedar, "Storefront rebuild", [P.e]),
     T(11, "Draft Q4 content calendar", 4, fjord, "Spring campaign", [P.d, P.f]),
     T(12, "Security review sign-off", 5, acme, "Billing portal", []),
@@ -86,9 +86,9 @@ export const TIMELINE_ALL = {
 };
 
 function scopeTimeline(c: ClientSummary) {
-  const f = (items: TimelineTask[]) => items.filter((t) => t.space_id === c.space_id);
+  const f = (tasks: TimelineTask[]) => tasks.filter((t) => t.space_id === c.space_id);
   const t = TIMELINE_ALL;
-  const mk = (b: { items: TimelineTask[] }) => ({ total: f(b.items).length, items: f(b.items) });
+  const mk = (b: { tasks: TimelineTask[] }) => ({ total: f(b.tasks).length, tasks: f(b.tasks) });
   return { overdue: mk(t.overdue), today: mk(t.today), tomorrow: mk(t.tomorrow), this_week: mk(t.this_week) };
 }
 
@@ -132,7 +132,7 @@ const ACTIVITY = [
 export type Who = "owner" | "admin" | "adminScoped" | "management";
 
 /** The team dashboard as the API would answer for `who`, optionally scoped to one client. */
-export function teamDashboard(who: Who, spaceId?: string): TeamDashboardData {
+export function teamDashboard(who: Who, spaceId?: string): TeamDashboard {
   let clients = CLIENTS;
   if (who === "adminScoped") clients = [acme, cedar, fjord];
   const scope = spaceId ? clients.find((c) => c.space_id === spaceId) : undefined;
@@ -156,7 +156,7 @@ export function teamDashboard(who: Who, spaceId?: string): TeamDashboardData {
     unassigned_open: scope ? 2 : 7,
     recent_activity: ACTIVITY,
     files: scope ? { count: 64, total_bytes: 412_000_000, expiring_soon: 0 } : { count: 842, total_bytes: 6_480_000_000, expiring_soon: 14 },
-    scope: scope ? { space_id: scope.space_id, space_name: scope.name } : null,
+    scope: scope ? { space_id: scope.space_id, space_name: scope.name } : { space_id: null, space_name: null },
     clients,
     timeline: tl,
     owner:

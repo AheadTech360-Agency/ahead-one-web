@@ -20,7 +20,7 @@ import { OwnerBlock } from "./components/owner-block";
 import { DeltaChip, Legend, Panel } from "./components/primitives";
 import { TeamSkeleton } from "./components/skeletons";
 import { ActivityPanel, ProjectsPanel, TimelinePanel, WorkloadPanel } from "./components/work-panels";
-import type { ClientSummary, TeamDashboardData } from "./contract";
+import type { ClientSummary, TeamDashboard } from "@/lib/api/types";
 import { canSeeTeamDashboard, dashboardKind, formatCount, parseClientParam, resolveClient, viewHref, weekDelta } from "./lib/logic";
 
 /* The chart is code most visits do not need above the fold: load it on demand, in a box of the same height. */
@@ -150,7 +150,7 @@ function Header({
   clients: ClientSummary[];
   clientId: string | undefined;
   workspaceName: string | undefined;
-  d: TeamDashboardData | undefined;
+  d: TeamDashboard | undefined;
   onMode: (m: "complete" | "client") => void;
   onClient: (id: string) => void;
   switchDisabled: boolean;
@@ -199,7 +199,7 @@ function Header({
 
 /* ---------- Arrangements ---------- */
 
-function Operations({ d, scoped }: { d: TeamDashboardData; scoped: boolean }) {
+function Operations({ d, scoped }: { d: TeamDashboard; scoped: boolean }) {
   return (
     <>
       <KpiStrip totals={d.totals} scoped={scoped} />
@@ -217,7 +217,7 @@ function Operations({ d, scoped }: { d: TeamDashboardData; scoped: boolean }) {
         </div>
         <div className="flex flex-col gap-4 lg:col-span-5">
           <Panel title="Timeline" count={d.timeline.overdue.total + d.timeline.today.total} aside="Overdue and due soon" id="ops-timeline">
-            <TimelinePanel timeline={d.timeline} />
+            <TimelinePanel timeline={d.timeline} clients={d.clients} />
           </Panel>
           <Panel title="Completed per day" aside="Last 14 days" id="ops-trend">
             <div className="p-4">
@@ -235,7 +235,7 @@ function WorkloadLegend() {
   return <Legend items={[{ label: "On time", className: "bg-chart-1" }, { label: "Overdue", className: "bg-chart-3" }]} />;
 }
 
-function Executive({ d, mode, onOpen }: { d: TeamDashboardData; mode: "complete" | "client"; onOpen: (id: string) => void }) {
+function Executive({ d, mode, onOpen }: { d: TeamDashboard; mode: "complete" | "client"; onOpen: (id: string) => void }) {
   const delta = weekDelta(d.totals.completed_7d, d.totals.completed_prev_7d);
   const total14 = d.completed_by_day.reduce((n, x) => n + x.count, 0);
   return (
@@ -283,7 +283,7 @@ function Executive({ d, mode, onOpen }: { d: TeamDashboardData; mode: "complete"
         </div>
         <div className="flex flex-col gap-4 lg:col-span-5">
           <Panel title="Timeline" count={d.timeline.overdue.total + d.timeline.today.total} aside="Overdue and due soon" id="exec-timeline">
-            <TimelinePanel timeline={d.timeline} />
+            <TimelinePanel timeline={d.timeline} clients={d.clients} />
           </Panel>
           <Panel title="Recent activity" id="exec-activity">
             <ActivityPanel items={d.recent_activity} max={5} />

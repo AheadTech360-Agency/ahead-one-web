@@ -9,13 +9,13 @@ import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient }
 import { api } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
 import { STALE } from "@/lib/cache/stale";
-import type { ClientAccessBody, TeamDashboardData } from "./contract";
+import type { MemberClients, SetMemberClients, TeamDashboard } from "@/lib/api/types";
 
 export const teamDashboardOptions = (ws: string | undefined, spaceId: string | undefined, enabled = true) =>
   queryOptions({
     queryKey: qk.workspace(ws ?? "").teamDashboard(spaceId),
     queryFn: ({ signal }) =>
-      api<TeamDashboardData>(`/v1/workspaces/${ws}/dashboard/team`, { query: { space_id: spaceId }, signal }),
+      api<TeamDashboard>(`/v1/workspaces/${ws}/dashboard/team`, { query: { space_id: spaceId }, signal }),
     enabled: Boolean(ws) && enabled,
     staleTime: STALE.DASHBOARD,
   });
@@ -33,7 +33,7 @@ export function useTeamDashboard(ws: string | undefined, spaceId: string | undef
 export const memberClientsOptions = (ws: string | undefined, userId: string, enabled = true) =>
   queryOptions({
     queryKey: qk.workspace(ws ?? "").memberClients(userId),
-    queryFn: ({ signal }) => api<ClientAccessBody>(`/v1/workspaces/${ws}/members/${userId}/clients`, { signal }),
+    queryFn: ({ signal }) => api<MemberClients>(`/v1/workspaces/${ws}/members/${userId}/clients`, { signal }),
     enabled: Boolean(ws) && enabled,
     staleTime: STALE.PEOPLE,
   });
@@ -46,13 +46,13 @@ export function useMemberClients(ws: string | undefined, userId: string, enabled
 export function useSetMemberClients(ws: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ userId, body }: { userId: string; body: ClientAccessBody }) =>
-      api<ClientAccessBody>(`/v1/workspaces/${ws}/members/${userId}/clients`, { method: "PUT", body }),
+    mutationFn: ({ userId, body }: { userId: string; body: SetMemberClients }) =>
+      api<MemberClients>(`/v1/workspaces/${ws}/members/${userId}/clients`, { method: "PUT", body }),
     onMutate: async ({ userId, body }) => {
       const key = qk.workspace(ws).memberClients(userId);
       await qc.cancelQueries({ queryKey: key });
-      const previous = qc.getQueryData<ClientAccessBody>(key);
-      qc.setQueryData<ClientAccessBody>(key, body);
+      const previous = qc.getQueryData<MemberClients>(key);
+      qc.setQueryData<MemberClients>(key, body);
       return { key, previous };
     },
     onError: (_e, _v, ctx) => {

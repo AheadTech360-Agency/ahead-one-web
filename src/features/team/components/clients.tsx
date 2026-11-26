@@ -6,7 +6,7 @@ import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/ui/empty-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import type { ClientSummary } from "../contract";
+import type { ClientSummary } from "@/lib/api/types";
 import { formatCount } from "../lib/logic";
 import { ClientDot } from "./primitives";
 

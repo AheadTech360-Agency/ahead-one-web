@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { Avatar } from "@/ui/avatar";
 import { EmptyState } from "@/ui/empty-state";
 import { Tooltip } from "@/ui/tooltip";
-import type { Timeline, TimelineTask } from "../contract";
+import type { ClientSummary, Timeline, TimelineTask } from "@/lib/api/types";
 import { activityVerb, ago, percent, TIMELINE_KEYS, TIMELINE_LABEL, type TimelineKey } from "../lib/logic";
 import { ClientDot } from "./primitives";
 
@@ -107,7 +107,9 @@ export function WorkloadPanel({ rows, unassigned, className }: { rows: TeamWorkl
 
 /* ---------- Timeline ---------- */
 
-export function TimelinePanel({ timeline, className }: { timeline: Timeline; className?: string }) {
+export function TimelinePanel({ timeline, clients, className }: { timeline: Timeline; clients?: ClientSummary[]; className?: string }) {
+  const colors = new Map((clients ?? []).map((c) => [c.space_id, c.color]));
+  const colorOf = (id: string) => colors.get(id) ?? "var(--color-border-strong)";
   const all = TIMELINE_KEYS.reduce((n, k) => n + timeline[k].total, 0);
   if (all === 0) {
     return <EmptyState compact icon={CalendarCheck} title="Nothing due in the next week" description="Dated tasks appear here, grouped by when they are due." className={className} />;
@@ -115,13 +117,13 @@ export function TimelinePanel({ timeline, className }: { timeline: Timeline; cla
   return (
     <div className={className}>
       {TIMELINE_KEYS.map((k) => (
-        <TimelineGroup key={k} k={k} bucket={timeline[k]} />
+        <TimelineGroup key={k} k={k} bucket={timeline[k]} colorOf={colorOf} />
       ))}
     </div>
   );
 }
 
-function TimelineGroup({ k, bucket }: { k: TimelineKey; bucket: Timeline[TimelineKey] }) {
+function TimelineGroup({ k, bucket, colorOf }: { k: TimelineKey; bucket: Timeline[TimelineKey]; colorOf: (spaceId: string) => string }) {
   const late = k === "overdue";
   return (
     <section aria-label={TIMELINE_LABEL[k]} className="border-b border-border-subtle last:border-b-0">
@@ -130,15 +132,15 @@ function TimelineGroup({ k, bucket }: { k: TimelineKey; bucket: Timeline[Timelin
         <span className={late && bucket.total ? "text-danger-text" : "text-fg-muted"}>{TIMELINE_LABEL[k]}</span>
         <span className="font-medium tabular text-fg-faint">{bucket.total}</span>
       </h3>
-      {bucket.items.length === 0 ? (
+      {bucket.tasks.length === 0 ? (
         <p className="px-4 pb-3 text-12 text-fg-faint">{late ? "Nothing overdue." : "Nothing due."}</p>
       ) : (
         <ul className="m-0 list-none p-0 pb-1">
-          {bucket.items.map((t) => (
-            <TimelineRow key={t.task_id} t={t} late={late} />
+          {bucket.tasks.map((t) => (
+            <TimelineRow key={t.task_id} t={t} late={late} color={colorOf(t.space_id)} />
           ))}
-          {bucket.total > bucket.items.length && (
-            <li className="px-4 pb-2 pt-1 text-12 text-fg-muted tabular">and {bucket.total - bucket.items.length} more</li>
+          {bucket.total > bucket.tasks.length && (
+            <li className="px-4 pb-2 pt-1 text-12 text-fg-muted tabular">and {bucket.total - bucket.tasks.length} more</li>
           )}
         </ul>
       )}
@@ -146,7 +148,7 @@ function TimelineGroup({ k, bucket }: { k: TimelineKey; bucket: Timeline[Timelin
   );
 }
 
-function TimelineRow({ t, late }: { t: TimelineTask; late: boolean }) {
+function TimelineRow({ t, late, color }: { t: TimelineTask; late: boolean; color: string }) {
   const link = useTaskLink();
   const pf = usePrefetchers();
   return (
@@ -160,7 +162,7 @@ function TimelineRow({ t, late }: { t: TimelineTask; late: boolean }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-13 font-medium text-fg group-hover:underline">{t.title}</span>
           <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-12 text-fg-muted">
-            <ClientDot color={t.space_color} />
+            <ClientDot color={color} />
             <span className="truncate">
               {t.space_name}
               <span className="text-fg-faint"> / </span>
@@ -168,7 +170,7 @@ function TimelineRow({ t, late }: { t: TimelineTask; late: boolean }) {
             </span>
           </span>
         </span>
-        <span className={cn("shrink-0 text-12 tabular", late ? "font-medium text-danger-text" : "text-fg-muted")}>{format(new Date(t.due_at), "EEE d")}</span>
+        <span className={cn("shrink-0 text-12 tabular", late ? "font-medium text-danger-text" : "text-fg-muted")}>{format(new Date(t.due_date), "EEE d")}</span>
         <AvatarStack users={t.assignees} />
       </Link>
     </li>
