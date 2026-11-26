@@ -1,8 +1,8 @@
 "use client";
 
 import { format, formatDistanceToNowStrict, isPast } from "date-fns";
-import { CircleAlert, Mail, MoreHorizontal, RotateCw, Send, ShieldAlert, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
-import { useState } from "react";
+import { CircleAlert, Mail, Search, MoreHorizontal, RotateCw, Send, ShieldAlert, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 import { z } from "zod";
 import { PageHeader } from "@/components/page";
 import { errorMessage, isApiError } from "@/lib/api/client";
@@ -13,7 +13,6 @@ import {
   useRemoveMember,
   useResendInvite,
   useRevokeInvite,
-  useUpdateMemberRole,
 } from "@/lib/api/hooks";
 import type { Invite, Member, Role } from "@/lib/api/types";
 import { ROLE_DESCRIPTION, ROLE_LABEL, ROLES, roleAtLeast, useWorkspace } from "@/lib/workspace";
@@ -28,17 +27,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/ui/menu";
 import { Select } from "@/ui/select";
 import { SkeletonRows } from "@/ui/skeleton";
+import { ClientAccessCell } from "@/features/team/members/client-access";
+import { AccessAuditSection } from "@/features/team/members/access-audit";
+import { PermissionsPanel } from "@/features/team/members/permissions-panel";
+import { RoleDialog } from "@/features/team/members/role-dialog";
+import { canEditRole } from "@/lib/permissions/rules";
 import { toast } from "@/ui/toaster";
 
 /** Roles an actor may grant: only owners may grant owner or admin. */
@@ -54,6 +52,16 @@ export function MembersView() {
   const isAdmin = roleAtLeast(role, "admin");
   const invites = useInvites(workspaceId, isAdmin);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return (members.data ?? []).filter(
+      (m) =>
+        (roleFilter === "all" || m.role === roleFilter) &&
+        (!term || m.user.full_name.toLowerCase().includes(term) || m.user.email.toLowerCase().includes(term)),
+    );
+  }, [members.data, query, roleFilter]);
 
   const forbidden = isApiError(members.error) && members.error.status === 403;
 
@@ -96,7 +104,30 @@ export function MembersView() {
         ) : members.data.length === 0 ? (
           <EmptyState icon={Users} title="No members yet" description="Invite your team to start sharing projects." />
         ) : (
-          <MembersTable members={members.data} actorRole={role} meId={me?.user.id} workspaceId={workspaceId} />
+          <>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+                <Search aria-hidden className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-fg-faint" />
+                <Input aria-label="Search members" placeholder="Search by name or email" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-8" />
+              </div>
+              <Select
+                aria-label="Filter by role"
+                size="sm"
+                value={roleFilter}
+                onValueChange={(v) => setRoleFilter(v as Role | "all")}
+                options={[{ value: "all", label: "All roles" }, ...ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] }))]}
+                className="w-40"
+              />
+              <p className="ml-auto text-12 tabular text-fg-muted" aria-live="polite">
+                {filtered.length === members.data.length ? `${filtered.length} shown` : `${filtered.length} of ${members.data.length}`}
+              </p>
+            </div>
+            {filtered.length === 0 ? (
+              <EmptyState compact icon={Search} title="No one matches" description="Try another name or clear the role filter." />
+            ) : (
+              <MembersTable members={filtered} actorRole={role} meId={me?.user.id} workspaceId={workspaceId} />
+            )}
+          </>
         )}
       </section>
 
@@ -127,6 +158,9 @@ export function MembersView() {
           </div>
         </section>
       )}
+
+      {workspaceId && role === "owner" && <AccessAuditSection workspaceId={workspaceId} />}
+      <PermissionsPanel highlight={role} />
 
       {workspaceId && (
         <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} workspaceId={workspaceId} actorRole={role} />
@@ -170,10 +204,9 @@ function MembersTable({
   meId?: string;
   workspaceId: string;
 }) {
-  const updateRole = useUpdateMemberRole(workspaceId);
   const remove = useRemoveMember(workspaceId);
   const [removing, setRemoving] = useState<Member | null>(null);
-  const roles = grantable(actorRole);
+  const [editing, setEditing] = useState<Member | null>(null);
 
   function canManage(m: Member) {
     if (m.user.id === meId) return false;
@@ -183,11 +216,12 @@ function MembersTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] border-collapse text-13">
+      <table className="w-full min-w-[720px] border-collapse text-13">
         <thead className="sticky top-0 z-[var(--z-sticky)] bg-surface">
           <tr className="border-b border-border">
             <th scope="col" className={th}>Name</th>
             <th scope="col" className={th}>Role</th>
+            <th scope="col" className={th}>Client access</th>
             <th scope="col" className={`${th} text-right`}>Joined</th>
             <th scope="col" className="w-12"><span className="sr-only">Actions</span></th>
           </tr>
@@ -210,6 +244,17 @@ function MembersTable({
               <td className={td}>
                 <Badge tone={m.role === "owner" || m.role === "admin" ? "accent" : "neutral"}>{ROLE_LABEL[m.role]}</Badge>
               </td>
+              <td className={td}>
+                {m.role === "admin" && actorRole === "owner" ? (
+                  <ClientAccessCell member={m} workspaceId={workspaceId} />
+                ) : m.role === "admin" ? (
+                  <span className="text-12 text-fg-faint">Set by the Owner</span>
+                ) : m.role === "member" || m.role === "guest" ? (
+                  <span className="text-12 text-fg-faint">Added projects only</span>
+                ) : (
+                  <span className="text-13 text-fg-muted">All clients</span>
+                )}
+              </td>
               <td className={`${td} text-right text-fg-muted tabular`}>
                 <time dateTime={m.joined_at} title={format(new Date(m.joined_at), "PPpp")}>
                   {format(new Date(m.joined_at), "yyyy-MM-dd")}
@@ -225,33 +270,9 @@ function MembersTable({
                       <MoreHorizontal className="size-4" aria-hidden />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>Change role</DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-64">
-                          <DropdownMenuLabel>Role for {m.user.full_name || m.user.email}</DropdownMenuLabel>
-                          <DropdownMenuRadioGroup
-                            value={m.role}
-                            onValueChange={(v) =>
-                              updateRole.mutate(
-                                { userId: m.user.id, role: v as Role },
-                                {
-                                  onSuccess: () => toast.success(`${m.user.full_name || m.user.email} is now ${ROLE_LABEL[v as Role]}`),
-                                  onError: (e) => toast.error("Couldn't change the role", { description: errorMessage(e) }),
-                                },
-                              )
-                            }
-                          >
-                            {roles.map((r) => (
-                              <DropdownMenuRadioItem key={r} value={r} className="h-auto py-1.5">
-                                <span className="flex flex-col">
-                                  <span>{ROLE_LABEL[r]}</span>
-                                  <span className="text-12 text-fg-muted">{ROLE_DESCRIPTION[r]}</span>
-                                </span>
-                              </DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
+                      {canEditRole(actorRole, m.role, m.user.id === meId) && (
+                        <DropdownMenuItem onSelect={() => setEditing(m)}>Change role</DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem danger onSelect={() => setRemoving(m)}>
                         <UserMinus aria-hidden /> Remove from workspace
@@ -264,6 +285,7 @@ function MembersTable({
           ))}
         </tbody>
       </table>
+      <RoleDialog member={editing} actorRole={actorRole} workspaceId={workspaceId} onClose={() => setEditing(null)} />
       <ConfirmDialog
         open={Boolean(removing)}
         onOpenChange={(o) => !o && setRemoving(null)}

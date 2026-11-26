@@ -94,7 +94,21 @@ export function useUpdateMemberRole(ws: string) {
   return useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: Role }) =>
       api<Member>(`/v1/workspaces/${ws}/members/${userId}`, { method: "PATCH", body: { role } }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.workspace(ws).members() }),
+    // Optimistic: the list shows the new role at once and rolls back if the API refuses.
+    onMutate: async ({ userId, role }) => {
+      const key = qk.workspace(ws).members();
+      await qc.cancelQueries({ queryKey: key });
+      const previous = qc.getQueryData<Member[]>(key);
+      qc.setQueryData<Member[]>(key, (list) => list?.map((m) => (m.user.id === userId ? { ...m, role } : m)));
+      return { key, previous };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx) qc.setQueryData(ctx.key, ctx.previous);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: qk.workspace(ws).members() });
+      void qc.invalidateQueries({ queryKey: [...qk.workspace(ws).all, "audit-log"] });
+    },
   });
 }
 
