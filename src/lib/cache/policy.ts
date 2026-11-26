@@ -65,11 +65,14 @@ export function isPersistableKey(key: Key): boolean {
 const SECRET_FIELD = /^(access_token|refresh_token|id_token|token|password|passcode|secret|client_secret|api_key|upload_url|download_url|signed_url)$/i;
 
 /**
- * Defence in depth: true when any object in `data` has a secret-shaped field name. Walks at most
- * `limit` nodes so a very large payload costs a bounded amount of work (past the limit the data is
- * treated as unsafe and stays in memory).
+ * Field names that only Owners and Admins receive (who has email-code sign-in, client access, the audit
+ * events and security flags on the Owner dashboard). They stay in memory: a person who is demoted must not
+ * keep reading them from a copy on the device.
  */
-export function hasSecretShape(data: unknown, limit = 200_000): boolean {
+const PRIVILEGED_FIELD = /^(two_factor_enabled|all_clients|space_ids|recent_audit|members_without_two_factor|role_counts)$/i;
+
+/** True when any object in `data` has a field name matching `re`. Bounded work: past `limit` nodes, treat as a match. */
+function hasFieldShape(data: unknown, re: RegExp, limit: number): boolean {
   const stack: unknown[] = [data];
   let seen = 0;
   while (stack.length) {
@@ -81,11 +84,25 @@ export function hasSecretShape(data: unknown, limit = 200_000): boolean {
       continue;
     }
     for (const k of Object.keys(v)) {
-      if (SECRET_FIELD.test(k)) return true;
+      if (re.test(k)) return true;
       stack.push((v as Record<string, unknown>)[k]);
     }
   }
   return false;
+}
+
+/**
+ * Defence in depth: true when any object in `data` has a secret-shaped field name. Walks at most
+ * `limit` nodes so a very large payload costs a bounded amount of work (past the limit the data is
+ * treated as unsafe and stays in memory).
+ */
+export function hasSecretShape(data: unknown, limit = 200_000): boolean {
+  return hasFieldShape(data, SECRET_FIELD, limit);
+}
+
+/** True when the payload carries Owner/Admin-only fields (see PRIVILEGED_FIELD). */
+export function hasPrivilegedShape(data: unknown, limit = 200_000): boolean {
+  return hasFieldShape(data, PRIVILEGED_FIELD, limit);
 }
 
 type QueryLike = {
@@ -99,7 +116,7 @@ export function shouldPersistQuery(q: QueryLike): boolean {
   if (q.state.status !== "success") return false;
   if (q.meta?.persist === false) return false;
   if (!isPersistableKey(q.queryKey)) return false;
-  return !hasSecretShape(q.state.data);
+  return !hasSecretShape(q.state.data) && !hasPrivilegedShape(q.state.data);
 }
 
 /* ---------- Scope: one signed-in user per cache ---------- */

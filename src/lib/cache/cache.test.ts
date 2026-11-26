@@ -4,6 +4,7 @@ import {
   CACHE_SCHEMA,
   cacheBuster,
   decideScope,
+  hasPrivilegedShape,
   hasSecretShape,
   isPersistableKey,
   PERSIST_MAX_AGE_MS,
@@ -184,5 +185,23 @@ describe("refresh failure notices", () => {
     assert.equal(gate.allow("failed"), true);
     gate.reset();
     assert.equal(gate.allow("failed"), true);
+  });
+});
+
+describe("Owner and Admin only fields stay off disk", () => {
+  const ok = (key: readonly unknown[], data: unknown) => shouldPersistQuery({ queryKey: key as never, state: { status: "success", data }, meta: undefined });
+  it("detects the privileged field names", () => {
+    assert.equal(hasPrivilegedShape({ members: [{ user: {}, two_factor_enabled: true }] }), true);
+    assert.equal(hasPrivilegedShape({ owner: { recent_audit: [] } }), true);
+    assert.equal(hasPrivilegedShape([{ role: "admin", all_clients: false, space_ids: ["a"] }]), true);
+    assert.equal(hasPrivilegedShape({ totals: { open_tasks: 3 }, workload: [] }), false);
+  });
+  it("does not persist the Owner dashboard or the Owner and Admin member list", () => {
+    assert.equal(ok(["ws", "w1", "team-dashboard", "all"], { totals: {}, owner: { role_counts: [], recent_audit: [] } }), false);
+    assert.equal(ok(["ws", "w1", "members"], [{ user: { id: "u" }, role: "member", two_factor_enabled: false }]), false);
+  });
+  it("still persists an Admin dashboard and a plain member list", () => {
+    assert.equal(ok(["ws", "w1", "team-dashboard", "all"], { totals: { open_tasks: 4 }, owner: null, workload: [] }), true);
+    assert.equal(ok(["ws", "w1", "members"], [{ user: { id: "u" }, role: "member" }]), true);
   });
 });
