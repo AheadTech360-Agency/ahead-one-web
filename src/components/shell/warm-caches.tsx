@@ -14,15 +14,15 @@ import { useWorkspace } from "@/lib/workspace";
  */
 export function WarmCaches() {
   const qc = useQueryClient();
-  const { workspaceId } = useWorkspace();
+  const { workspaceId, role } = useWorkspace();
 
   useEffect(() => {
     void getAccessToken();
   }, []);
 
   useEffect(() => {
-    if (workspaceId) warmAfterLoad(qc, workspaceId);
-  }, [qc, workspaceId]);
+    if (workspaceId && role) warmAfterLoad(qc, workspaceId, role);
+  }, [qc, workspaceId, role]);
 
   return null;
 }
