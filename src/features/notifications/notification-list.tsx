@@ -1,20 +1,7 @@
 "use client";
 
 import { formatDistanceToNowStrict, isSameDay } from "date-fns";
-import {
-  AtSign,
-  Bell,
-  CalendarClock,
-  Check,
-  CheckCheck,
-  CircleAlert,
-  MessageSquare,
-  MessagesSquare,
-  RotateCw,
-  Smartphone,
-  UserPlus,
-  type LucideIcon,
-} from "lucide-react";
+import { Bell, Check, CheckCheck, CircleAlert, RotateCw } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
 import { errorMessage } from "@/lib/api/client";
 import { useNotifications } from "@/lib/api/hooks";
@@ -28,26 +15,8 @@ import { Skeleton } from "@/ui/skeleton";
 import { Spinner } from "@/ui/spinner";
 import { dayLabel } from "@/features/messages/format";
 import { useMarkRead } from "./api";
-
-export const KIND_ICON: Record<NotificationKind, LucideIcon> = {
-  task_assigned: UserPlus,
-  mentioned: AtSign,
-  task_comment: MessageSquare,
-  task_due_soon: CalendarClock,
-  task_overdue: CircleAlert,
-  direct_message: MessagesSquare,
-  app_update: Smartphone,
-};
-
-export const KIND_LABEL: Record<NotificationKind, string> = {
-  task_assigned: "Assigned",
-  mentioned: "Mention",
-  task_comment: "Comment",
-  task_due_soon: "Due soon",
-  task_overdue: "Overdue",
-  direct_message: "Message",
-  app_update: "App update",
-};
+import { kindIcon } from "./kind-icons";
+import { kindInfo } from "./kinds";
 
 /** Due dates are the only kinds that carry colour: they ask for action. */
 const KIND_TONE: Partial<Record<NotificationKind, string>> = {
@@ -64,7 +33,7 @@ export function NotificationRow({
   onOpen: (n: Notification) => void;
   dense?: boolean;
 }) {
-  const Icon = KIND_ICON[n.kind] ?? Bell;
+  const Icon = kindIcon(n.kind);
   const unread = !n.read_at;
   const markRead = useMarkRead();
   return (
@@ -93,7 +62,7 @@ export function NotificationRow({
           <span className="mt-1 flex items-center gap-1.5 text-11 text-fg-faint">
             <span className={cn("inline-flex items-center gap-1 font-medium", KIND_TONE[n.kind] ?? "text-fg-muted")}>
               <Icon className="size-3" strokeWidth={2} aria-hidden />
-              {KIND_LABEL[n.kind] ?? "Update"}
+              {kindInfo(n.kind).label}
             </span>
             <time dateTime={n.created_at}>{formatDistanceToNowStrict(new Date(n.created_at), { addSuffix: true })}</time>
           </span>

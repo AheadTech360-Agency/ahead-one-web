@@ -39,6 +39,7 @@ import { Select } from "@/ui/select";
 import { Skeleton, SkeletonRows } from "@/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { toast } from "@/ui/toaster";
+import { groupPrefs } from "@/features/notifications/kinds";
 import { BrowserPushControl } from "@/features/push/push-controls";
 
 const TABS = ["profile", "appearance", "notifications", "security"] as const;
@@ -275,16 +276,6 @@ function ThemePreview({ kind }: { kind: string }) {
 
 /* ---------- Notifications ---------- */
 
-/** `app_update` is always on and not listed in the preferences. */
-const KIND_LABEL: Record<Exclude<NotificationKind, "app_update">, { label: string; line: string }> = {
-  task_assigned: { label: "Assigned to me", line: "Someone assigns you a task" },
-  mentioned: { label: "Mentions", line: "Someone @mentions you" },
-  task_comment: { label: "Comments", line: "New comments on tasks you follow" },
-  task_due_soon: { label: "Due soon", line: "Your tasks due in the next 24 hours" },
-  task_overdue: { label: "Overdue", line: "Your tasks that pass their due date" },
-  direct_message: { label: "Direct messages", line: "New messages sent to you" },
-};
-
 function NotificationsTab() {
   const q = useNotificationPrefs();
   if (q.isPending) return <SkeletonRows rows={6} columns={[40, 8, 8, 8]} />;
@@ -346,32 +337,39 @@ function NotificationPrefsForm({ initial }: { initial: NotificationPrefs }) {
             ))}
           </tr>
         </thead>
-        <tbody>
-          {prefs.prefs.map((p, i) => (
-            <tr key={p.kind} className="border-b border-border-subtle">
-              <th scope="row" className="py-2.5 text-left font-normal">
-                <span className="block font-medium text-fg">{(KIND_LABEL as Partial<Record<NotificationKind, { label: string; line: string }>>)[p.kind]?.label ?? p.kind}</span>
-                <span className="block text-12 text-fg-muted">{(KIND_LABEL as Partial<Record<NotificationKind, { label: string; line: string }>>)[p.kind]?.line}</span>
+        {groupPrefs(prefs.prefs).map((g) => (
+          <tbody key={g.group}>
+            <tr>
+              <th scope="colgroup" colSpan={4} className="pb-1 pt-5 text-left text-12 font-semibold uppercase tracking-[0.06em] text-fg-muted">
+                {g.group}
               </th>
-              {channels.map((c) => (
-                <td key={c.key} className="text-center">
-                  <span className="inline-flex">
-                    <Checkbox
-                      aria-label={`${(KIND_LABEL as Partial<Record<NotificationKind, { label: string; line: string }>>)[p.kind]?.label ?? p.kind}: ${c.label}`}
-                      checked={p[c.key]}
-                      onCheckedChange={(v) =>
-                        commit({
-                          ...prefs,
-                          prefs: prefs.prefs.map((x, j) => (j === i ? { ...x, [c.key]: v === true } : x)),
-                        })
-                      }
-                    />
-                  </span>
-                </td>
-              ))}
             </tr>
-          ))}
-        </tbody>
+            {g.rows.map((p) => (
+              <tr key={p.kind} className="border-b border-border-subtle">
+                <th scope="row" className="py-2.5 text-left font-normal">
+                  <span className="block font-medium text-fg">{p.title}</span>
+                  {p.description && <span className="block text-12 text-fg-muted">{p.description}</span>}
+                </th>
+                {channels.map((c) => (
+                  <td key={c.key} className="text-center">
+                    <span className="inline-flex">
+                      <Checkbox
+                        aria-label={`${p.title}: ${c.label}`}
+                        checked={p[c.key]}
+                        onCheckedChange={(v) =>
+                          commit({
+                            ...prefs,
+                            prefs: prefs.prefs.map((x) => (x.kind === p.kind ? { ...x, [c.key]: v === true } : x)),
+                          })
+                        }
+                      />
+                    </span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        ))}
       </table>
       <BrowserPushControl />
       <Switch

@@ -21,6 +21,13 @@ const FIREBASE_CONFIG = ${JSON.stringify(config)};
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
+function targetFor(data, fallbackLink) {
+  // The link wins; a message push without one opens its conversation.
+  if (data && data.link) return data.link;
+  if (data && data.conversation_id) return "/messages/" + encodeURIComponent(data.conversation_id);
+  return fallbackLink;
+}
+
 function appUrl(raw) {
   try {
     const url = new URL(raw || "/inbox", self.location.origin);
@@ -41,14 +48,15 @@ self.addEventListener("push", (event) => {
   if (FIREBASE_CONFIG.messagingSenderId && payload.from && String(payload.from) !== FIREBASE_CONFIG.messagingSenderId) return;
   const n = payload.notification || {};
   const data = payload.data || {};
-  const link = appUrl(data.link || (payload.fcmOptions && payload.fcmOptions.link) || n.click_action);
+  const link = appUrl(targetFor(data, (payload.fcmOptions && payload.fcmOptions.link) || n.click_action));
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       // The open app shows its own toast for normal notifications; test pushes carry always_show.
       if (data.always_show !== "1" && windows.some((w) => w.focused && w.visibilityState === "visible")) return;
       return self.registration.showNotification(n.title || "AheadOne", {
         body: n.body || "",
-        tag: link,
+        // One notification per conversation (or link), so a burst of messages replaces the last one.
+        tag: data.conversation_id ? "conv:" + data.conversation_id : link,
         renotify: true,
         data: { link },
       });

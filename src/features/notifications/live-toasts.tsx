@@ -3,7 +3,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "@/ui/toaster";
 import { useRealtimeEvent } from "@/features/realtime/provider";
-import { safeLink, useMarkRead } from "./api";
+import { useMarkRead } from "./api";
+import { deepLink } from "./kinds";
 
 /**
  * While the tab is in front, a new message or mention also shows as a toast, unless you're
@@ -18,8 +19,9 @@ export function LiveNotificationToasts() {
     if (ev.type !== "notification.created") return;
     const n = ev.notification;
     if (n.read_at || document.visibilityState !== "visible") return;
-    if (n.kind !== "direct_message" && n.kind !== "mentioned" && n.kind !== "task_assigned") return;
-    const link = safeLink(n.link);
+    // Every kind toasts except the quiet system ones; a notification for the conversation on screen stays silent.
+    if (n.kind === "app_update") return;
+    const link = deepLink(n.kind, n.link);
     if (link === pathname) return;
     toast(n.title, {
       id: n.id,
