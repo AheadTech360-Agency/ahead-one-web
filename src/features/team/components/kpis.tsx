@@ -5,10 +5,10 @@ import { DeltaChip } from "./primitives";
 
 type Item = { key: string; label: string; value: number; caption: React.ReactNode; tone?: "danger" | "good" };
 
-function items(t: TeamTotals, scoped: boolean): Item[] {
+function items(t: TeamTotals, scoped: boolean, what: "client" | "project"): Item[] {
   const d = weekDelta(t.completed_7d, t.completed_prev_7d);
   return [
-    { key: "open", label: "Open tasks", value: t.open_tasks, caption: scoped ? "In this client" : "Across all clients" },
+    { key: "open", label: "Open tasks", value: t.open_tasks, caption: scoped ? `In this ${what}` : "Across all clients" },
     {
       key: "overdue",
       label: "Overdue",
@@ -32,10 +32,10 @@ const toneClass = (tone: Item["tone"], v: number) =>
   tone === "danger" ? "text-danger-text" : tone === "good" ? "text-success-text" : v === 0 ? "text-fg-faint" : "text-fg";
 
 /** Operations board: one ruled strip of four figures. Compact, scannable left to right. */
-export function KpiStrip({ totals, scoped, className }: { totals: TeamTotals; scoped: boolean; className?: string }) {
+export function KpiStrip({ totals, scoped, what = "client", className }: { totals: TeamTotals; scoped: boolean; what?: "client" | "project"; className?: string }) {
   return (
     <dl className={cn("m-0 grid grid-cols-2 overflow-hidden rounded-md border border-border bg-surface lg:grid-cols-4", className)}>
-      {items(totals, scoped).map((k, i) => (
+      {items(totals, scoped, what).map((k, i) => (
         <div key={k.key} className={cn("flex min-h-[104px] flex-col justify-between p-4", i % 2 === 1 && "border-l border-border-subtle", i >= 2 && "border-t border-border-subtle lg:border-t-0", i > 0 && "lg:border-l lg:border-border-subtle")}>
           <dt className="text-12 font-medium text-fg-muted">{k.label}</dt>
           <dd className="m-0">
@@ -49,10 +49,10 @@ export function KpiStrip({ totals, scoped, className }: { totals: TeamTotals; sc
 }
 
 /** Executive overview: tonal tiles on a 2x2 grid beside the trend. */
-export function KpiTiles({ totals, scoped, className }: { totals: TeamTotals; scoped: boolean; className?: string }) {
+export function KpiTiles({ totals, scoped, what = "client", className }: { totals: TeamTotals; scoped: boolean; what?: "client" | "project"; className?: string }) {
   return (
     <dl className={cn("m-0 grid grid-cols-2 gap-3", className)}>
-      {items(totals, scoped).map((k) => (
+      {items(totals, scoped, what).map((k) => (
         <div key={k.key} className="flex min-h-[112px] flex-col justify-between rounded-md bg-surface-sunken p-4">
           <dt className="text-12 font-medium text-fg-muted">{k.label}</dt>
           <dd className="m-0">

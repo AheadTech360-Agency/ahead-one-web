@@ -46,11 +46,65 @@ export function viewMode(clientId: string | undefined): ViewMode {
   return clientId ? "client" : "complete";
 }
 
-/** Build the href for a view, keeping other params. */
-export function viewHref(pathname: string, search: string, clientId: string | undefined): string {
+/** The `?project=` value when it looks like a project id; anything else means the whole client. */
+export function parseProjectParam(raw: string | null | undefined): string | undefined {
+  return parseClientParam(raw);
+}
+
+export type ScopeLevel = "complete" | "client" | "project";
+
+/** A project needs a client: `?project=` without a valid `?client=` is ignored. */
+export function scopeLevel(clientId: string | undefined, projectId: string | undefined): ScopeLevel {
+  if (!clientId) return "complete";
+  return projectId ? "project" : "client";
+}
+
+type ProjectLike = { project_id: string };
+
+/**
+ * The project to scope to: only one the API listed for the client. A stale or foreign id falls back
+ * to the whole client. While the list is unknown the id is kept so the request can start early.
+ */
+export function resolveProject(
+  clientId: string | undefined,
+  param: string | undefined,
+  projects: readonly ProjectLike[] | undefined,
+): string | undefined {
+  if (!clientId || !param) return undefined;
+  if (!projects) return param;
+  return projects.some((p) => p.project_id.toLowerCase() === param) ? param : undefined;
+}
+
+/*
+ * The API is gaining `scope.project_id`, `scope.project_name` and `projects_in_scope` on the team
+ * dashboard (GET .../dashboard/team?space_id=&project_id=). Until `npm run sync-types` brings them
+ * into src/lib/api/generated, this is the read side of that contract. Delete the type once generated.
+ */
+export type ProjectScopeRow = { project_id: string; name: string; color: string; open: number; overdue: number; done_7d: number; members: number };
+export type ProjectScopeExtras = {
+  scope?: { project_id?: string | null; project_name?: string | null };
+  projects_in_scope?: ProjectScopeRow[];
+};
+
+/**
+ * The project rows to offer in a client's picker and strip. `projects_in_scope` when the API sends
+ * it (it lists every project of the client even while one is selected); otherwise the dashboard's
+ * own project rows, which are the client's projects when scoped to a client.
+ */
+export function projectsForPicker(
+  d: { projects: readonly { project_id: string; name: string; color: string; open: number; overdue: number; done_7d: number }[] } & ProjectScopeExtras,
+): ProjectScopeRow[] {
+  const rows: ProjectScopeRow[] = d.projects_in_scope ? [...d.projects_in_scope] : d.projects.map((p) => ({ ...p, members: 0 }));
+  return rows.sort((a, b) => b.overdue - a.overdue || b.open - a.open || a.name.localeCompare(b.name));
+}
+
+/** Build the href for a view, keeping other params. The project only lives under a client. */
+export function viewHref(pathname: string, search: string, clientId: string | undefined, projectId?: string): string {
   const p = new URLSearchParams(search);
   if (clientId) p.set("client", clientId);
   else p.delete("client");
+  if (clientId && projectId) p.set("project", projectId);
+  else p.delete("project");
   const q = p.toString();
   return q ? `${pathname}?${q}` : pathname;
 }

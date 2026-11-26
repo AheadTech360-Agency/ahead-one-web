@@ -24,7 +24,7 @@ export const qk = {
     conversations: () => ["ws", ws, "conversations"] as const,
     dashboard: () => ["ws", ws, "dashboard"] as const,
     /** Owner, Admin and Management dashboard; `space` is the client (a space id) or "all". */
-    teamDashboard: (space: string | undefined) => ["ws", ws, "team-dashboard", space ?? "all"] as const,
+    teamDashboard: (space: string | undefined, project?: string) => ["ws", ws, "team-dashboard", space ?? "all", project ?? "all"] as const,
     /** Owner only, never persisted: which clients an Admin can see. */
     memberClients: (userId: string) => ["ws", ws, "member-clients", userId] as const,
     myTasks: (bucket: string) => ["ws", ws, "my-tasks", bucket] as const,

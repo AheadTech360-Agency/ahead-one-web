@@ -9,13 +9,18 @@ import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient }
 import { api } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
 import { STALE } from "@/lib/cache/stale";
+import type { ProjectScopeExtras } from "./lib/logic";
 import type { MemberClients, SetMemberClients, TeamDashboard } from "@/lib/api/types";
 
-export const teamDashboardOptions = (ws: string | undefined, spaceId: string | undefined, enabled = true) =>
+/** The project is only sent together with its client (the API ignores it otherwise). */
+export const teamDashboardOptions = (ws: string | undefined, spaceId: string | undefined, enabled = true, projectId?: string) =>
   queryOptions({
-    queryKey: qk.workspace(ws ?? "").teamDashboard(spaceId),
+    queryKey: qk.workspace(ws ?? "").teamDashboard(spaceId, spaceId ? projectId : undefined),
     queryFn: ({ signal }) =>
-      api<TeamDashboard>(`/v1/workspaces/${ws}/dashboard/team`, { query: { space_id: spaceId }, signal }),
+      api<TeamDashboard & ProjectScopeExtras>(`/v1/workspaces/${ws}/dashboard/team`, {
+        query: { space_id: spaceId, project_id: spaceId ? projectId : undefined },
+        signal,
+      }),
     enabled: Boolean(ws) && enabled,
     staleTime: STALE.DASHBOARD,
   });
@@ -24,8 +29,8 @@ export const teamDashboardOptions = (ws: string | undefined, spaceId: string | u
  * `enabled` must be false for Member and Guest (the API answers 403). While the client or view
  * changes, the previous data stays on screen (keepPreviousData) so nothing blanks.
  */
-export function useTeamDashboard(ws: string | undefined, spaceId: string | undefined, enabled: boolean) {
-  return useQuery({ ...teamDashboardOptions(ws, spaceId, enabled), placeholderData: keepPreviousData });
+export function useTeamDashboard(ws: string | undefined, spaceId: string | undefined, enabled: boolean, projectId?: string) {
+  return useQuery({ ...teamDashboardOptions(ws, spaceId, enabled, projectId), placeholderData: keepPreviousData });
 }
 
 /* ---------- Client access of an Admin (Owner only) ---------- */

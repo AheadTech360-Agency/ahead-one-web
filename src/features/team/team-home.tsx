@@ -1,9 +1,9 @@
 "use client";
 
-import { CircleAlert, Layers, Plus } from "lucide-react";
+import { CircleAlert, FolderKanban, Layers, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useShell } from "@/components/shell/shell-context";
 import { FilesSummaryStrip } from "./components/files-strip";
 import { TaskSlideOver } from "@/features/tasks/components/task-slide-over";
@@ -15,13 +15,27 @@ import { EmptyState } from "@/ui/empty-state";
 import { Skeleton } from "@/ui/skeleton";
 import { useTeamDashboard } from "./api";
 import { ClientCards, ClientPicker, ClientStrip, ViewSwitch } from "./components/clients";
+import { ProjectPicker, ProjectStrip, ScopeSwitch, type ClientScope } from "./components/projects";
 import { KpiStrip, KpiTiles } from "./components/kpis";
 import { OwnerBlock } from "./components/owner-block";
 import { DeltaChip, Legend, Panel } from "./components/primitives";
 import { TeamSkeleton } from "./components/skeletons";
 import { ActivityPanel, ProjectsPanel, TimelinePanel, WorkloadPanel } from "./components/work-panels";
 import type { ClientSummary, TeamDashboard } from "@/lib/api/types";
-import { canSeeTeamDashboard, dashboardKind, formatCount, parseClientParam, resolveClient, viewHref, weekDelta } from "./lib/logic";
+import {
+  canSeeTeamDashboard,
+  dashboardKind,
+  formatCount,
+  parseClientParam,
+  parseProjectParam,
+  projectsForPicker,
+  resolveClient,
+  resolveProject,
+  scopeLevel,
+  viewHref,
+  weekDelta,
+  type ProjectScopeRow,
+} from "./lib/logic";
 
 /* The chart is code most visits do not need above the fold: load it on demand, in a box of the same height. */
 const TrendHero = dynamic(() => import("./components/trend-chart"), { ssr: false, loading: () => <Skeleton className="h-[172px] w-full" /> });
@@ -57,10 +71,21 @@ export function TeamHome() {
   const { setCreateTaskOpen } = useShell();
 
   const param = parseClientParam(search.get("client"));
-  const q = useTeamDashboard(workspaceId, param, canSeeTeamDashboard(role));
+  const projectParam = param ? parseProjectParam(search.get("project")) : undefined;
+  const q = useTeamDashboard(workspaceId, param, canSeeTeamDashboard(role), projectParam);
   const d = q.data;
   const clients = d?.clients;
   const clientId = resolveClient(param, clients);
+
+  // The client's projects for the picker and strip. Kept while the next view loads (keepPreviousData).
+  const projects = useMemo<ProjectScopeRow[]>(() => (d && clientId ? projectsForPicker(d) : []), [d, clientId]);
+  const projectId = resolveProject(clientId, projectParam, d && clientId && !q.isPlaceholderData ? projects : undefined);
+  const level = scopeLevel(clientId, projectId);
+
+  // A project id that is not one of this client's projects: back to the whole client.
+  useEffect(() => {
+    if (projectParam && clientId && d && !q.isPlaceholderData && !projectId) router.replace(viewHref(pathname, search.toString(), clientId), { scroll: false });
+  }, [projectParam, clientId, projectId, d, q.isPlaceholderData, router, pathname, search]);
 
   // A client id that the API did not list (or an old link): drop back to the complete view.
   useEffect(() => {
@@ -68,12 +93,13 @@ export function TeamHome() {
   }, [param, clients, clientId, q.isPlaceholderData, router, pathname, search]);
 
   const go = useCallback(
-    (id: string | undefined) => {
+    (id: string | undefined, project?: string) => {
       if (id) writeLast(id);
-      router.replace(viewHref(pathname, search.toString(), id), { scroll: false });
+      router.replace(viewHref(pathname, search.toString(), id, project), { scroll: false });
     },
     [router, pathname, search],
   );
+  const goProject = useCallback((id: string | undefined) => go(clientId, id), [go, clientId]);
 
   const onMode = (m: "complete" | "client") => {
     if (m === "complete") return go(undefined);
@@ -83,7 +109,14 @@ export function TeamHome() {
     if (pick) go(pick.space_id);
   };
 
+  const onScope = (v: ClientScope) => {
+    if (v === "client") return goProject(undefined);
+    const first = projects[0];
+    if (first) goProject(first.project_id);
+  };
+
   const client = clients?.find((c) => c.space_id === clientId);
+  const project = projects.find((p) => p.project_id === projectId);
   const mode = clientId ? "client" : "complete";
   const exec = kind === "executive";
   const noClients = clients !== undefined && clients.length === 0;
@@ -96,6 +129,13 @@ export function TeamHome() {
         client={client}
         clients={clients ?? []}
         clientId={clientId}
+        level={level}
+        project={project}
+        projectName={d?.scope?.project_name ?? undefined}
+        projects={projects}
+        projectId={projectId}
+        onScope={onScope}
+        onProject={goProject}
         workspaceName={current?.workspace.name}
         d={d}
         onMode={onMode}
@@ -120,7 +160,11 @@ export function TeamHome() {
             {!exec || mode === "client" ? (
               <ClientStrip clients={d.clients} value={clientId} onPick={go} />
             ) : null}
-            {exec ? <Executive d={d} mode={mode} onOpen={go} /> : <Operations d={d} scoped={mode === "client"} />}
+            {clientId && projects.length > 0 ? <ProjectStrip spaceId={clientId} projects={projects} value={projectId} onPick={goProject} /> : null}
+            {clientId && projects.length === 0 ? (
+              <EmptyState compact icon={FolderKanban} title="No projects in this client" description="Create a project in this space and it shows here." />
+            ) : null}
+            {exec ? <Executive d={d} mode={mode} level={level} onOpen={go} /> : <Operations d={d} level={level} />}
           </>
         ) : null}
       </div>
@@ -137,6 +181,13 @@ function Header({
   client,
   clients,
   clientId,
+  level,
+  project,
+  projectName,
+  projects,
+  projectId,
+  onScope,
+  onProject,
   workspaceName,
   d,
   onMode,
@@ -149,6 +200,13 @@ function Header({
   client: ClientSummary | undefined;
   clients: ClientSummary[];
   clientId: string | undefined;
+  level: "complete" | "client" | "project";
+  project: ProjectScopeRow | undefined;
+  projectName: string | undefined;
+  projects: ProjectScopeRow[];
+  projectId: string | undefined;
+  onScope: (v: ClientScope) => void;
+  onProject: (id: string) => void;
   workspaceName: string | undefined;
   d: TeamDashboard | undefined;
   onMode: (m: "complete" | "client") => void;
@@ -156,20 +214,34 @@ function Header({
   switchDisabled: boolean;
   onNewTask: () => void;
 }) {
-  const eyebrow = mode === "client" ? "Client" : kind === "executive" ? "Executive overview" : "Operations board";
-  const title = mode === "client" ? (client?.name ?? d?.scope?.space_name ?? "Client") : kind === "executive" ? (workspaceName ?? "Workspace") : "Operations";
-  const fact = d
+  const clientName = client?.name ?? d?.scope?.space_name ?? "Client";
+  const eyebrow = level === "project" ? `${clientName} / Project` : mode === "client" ? "Client" : kind === "executive" ? "Executive overview" : "Operations board";
+  const title =
+    level === "project"
+      ? (project?.name ?? projectName ?? "Project")
+      : mode === "client"
+        ? clientName
+        : kind === "executive"
+          ? (workspaceName ?? "Workspace")
+          : "Operations";
+  const accent = level === "project" ? (project?.color ?? client?.color) : client?.color;
+  const fact =
+    d && level === "project"
+      ? d.totals.overdue_tasks > 0
+        ? `${formatCount(d.totals.overdue_tasks)} overdue, ${formatCount(d.totals.open_tasks)} open.`
+        : `Nothing overdue, ${formatCount(d.totals.open_tasks)} open.`
+      : d
     ? d.totals.overdue_tasks > 0
       ? `${formatCount(d.totals.overdue_tasks)} overdue across ${formatCount(d.totals.active_projects)} active ${d.totals.active_projects === 1 ? "project" : "projects"}.`
       : `Nothing overdue across ${formatCount(d.totals.active_projects)} active ${d.totals.active_projects === 1 ? "project" : "projects"}.`
     : "";
   return (
     <header className="relative overflow-hidden rounded-md bg-band px-5 py-5 text-band-fg sm:px-7 md:py-7">
-      {mode === "client" && client && <span aria-hidden className="absolute inset-y-0 left-0 w-2" style={{ backgroundColor: client.color }} />}
+      {mode === "client" && accent && <span aria-hidden className="absolute inset-y-0 left-0 w-2" style={{ backgroundColor: accent }} />}
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
         <div className="min-w-0 max-w-[720px]">
           <p className="flex items-center gap-2 text-12 font-medium uppercase tracking-[0.08em] text-band-dim">
-            <span aria-hidden className="size-2.5 shrink-0 bg-green" style={mode === "client" && client ? { backgroundColor: client.color, boxShadow: "0 0 0 2px var(--band-fg)" } : undefined} />
+            <span aria-hidden className="size-2.5 shrink-0 bg-green" style={mode === "client" && accent ? { backgroundColor: accent, boxShadow: "0 0 0 2px var(--band-fg)" } : undefined} />
             {eyebrow}
           </p>
           <h1 className="mt-2 text-balance text-24 font-semibold leading-8 tracking-[-0.02em] text-band-fg md:text-[30px] md:leading-[38px]">
@@ -187,6 +259,13 @@ function Header({
       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-band-line pt-4">
         <ViewSwitch mode={mode} onChange={onMode} disabled={switchDisabled} />
         {mode === "client" && <ClientPicker clients={clients} value={clientId} onChange={onClient} />}
+        {mode === "client" && clientId && (
+          <>
+            <span aria-hidden className="hidden h-5 w-px bg-band-line sm:block" />
+            <ScopeSwitch value={level === "project" ? "project" : "client"} onChange={onScope} disabled={projects.length === 0} />
+            {level === "project" && <ProjectPicker spaceId={clientId} projects={projects} value={projectId} onChange={onProject} />}
+          </>
+        )}
         {mode === "complete" && clients.length > 0 && (
           <p className="flex items-center gap-1.5 text-12 text-band-dim">
             <Layers className="size-3.5" aria-hidden /> {clients.length} {clients.length === 1 ? "client" : "clients"} in view
@@ -199,18 +278,21 @@ function Header({
 
 /* ---------- Arrangements ---------- */
 
-function Operations({ d, scoped }: { d: TeamDashboard; scoped: boolean }) {
+function Operations({ d, level }: { d: TeamDashboard; level: "complete" | "client" | "project" }) {
+  const scoped = level !== "complete";
   return (
     <>
-      <KpiStrip totals={d.totals} scoped={scoped} />
+      <KpiStrip totals={d.totals} scoped={scoped} what={level === "project" ? "project" : "client"} />
       <div className="grid items-start gap-4 lg:grid-cols-12">
         <div className="flex flex-col gap-4 lg:col-span-7">
           <Panel title="Who is assigned what" count={d.workload.length} aside={<WorkloadLegend />} id="ops-workload">
             <WorkloadPanel rows={d.workload} unassigned={d.unassigned_open} />
           </Panel>
-          <Panel title="Projects" count={d.projects.length} id="ops-projects">
-            <ProjectsPanel rows={d.projects} />
-          </Panel>
+          {level !== "project" && (
+            <Panel title="Projects" count={d.projects.length} id="ops-projects">
+              <ProjectsPanel rows={d.projects} />
+            </Panel>
+          )}
           <Panel title="Recent activity" id="ops-activity">
             <ActivityPanel items={d.recent_activity} max={6} />
           </Panel>
@@ -235,7 +317,7 @@ function WorkloadLegend() {
   return <Legend items={[{ label: "On time", className: "bg-chart-1" }, { label: "Overdue", className: "bg-chart-3" }]} />;
 }
 
-function Executive({ d, mode, onOpen }: { d: TeamDashboard; mode: "complete" | "client"; onOpen: (id: string) => void }) {
+function Executive({ d, mode, level, onOpen }: { d: TeamDashboard; mode: "complete" | "client"; level: "complete" | "client" | "project"; onOpen: (id: string) => void }) {
   const delta = weekDelta(d.totals.completed_7d, d.totals.completed_prev_7d);
   const total14 = d.completed_by_day.reduce((n, x) => n + x.count, 0);
   return (
@@ -261,7 +343,7 @@ function Executive({ d, mode, onOpen }: { d: TeamDashboard; mode: "complete" | "
             <TrendHero data={d.completed_by_day} height={150} hero />
           </div>
         </section>
-        <KpiTiles totals={d.totals} scoped={mode === "client"} className="lg:col-span-4" />
+        <KpiTiles totals={d.totals} scoped={mode === "client"} what={level === "project" ? "project" : "client"} className="lg:col-span-4" />
       </div>
 
       {mode === "complete" && (
@@ -277,9 +359,11 @@ function Executive({ d, mode, onOpen }: { d: TeamDashboard; mode: "complete" | "
           <Panel title="Who is assigned what" count={d.workload.length} aside={<WorkloadLegend />} id="exec-workload">
             <WorkloadPanel rows={d.workload} unassigned={d.unassigned_open} />
           </Panel>
-          <Panel title="Projects" count={d.projects.length} id="exec-projects">
-            <ProjectsPanel rows={d.projects} />
-          </Panel>
+          {level !== "project" && (
+            <Panel title="Projects" count={d.projects.length} id="exec-projects">
+              <ProjectsPanel rows={d.projects} />
+            </Panel>
+          )}
         </div>
         <div className="flex flex-col gap-4 lg:col-span-5">
           <Panel title="Timeline" count={d.timeline.overdue.total + d.timeline.today.total} aside="Overdue and due soon" id="exec-timeline">

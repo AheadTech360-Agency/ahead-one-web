@@ -77,6 +77,9 @@ export const prefetchers = (qc: QueryClient, ws: string | undefined, role?: Role
   /** One client's view of the team dashboard, warmed when the picker is hovered or focused. */
   teamClient: (spaceId: string | undefined) =>
     once(`team:${spaceId ?? "all"}`, () => qc.prefetchQuery(teamDashboardOptions(ws, spaceId))),
+  /** One project of a client, warmed on hover or focus in the project picker and strip. */
+  teamProject: (spaceId: string, projectId: string) =>
+    once(`team:${spaceId}:${projectId}`, () => qc.prefetchQuery(teamDashboardOptions(ws, spaceId, true, projectId))),
   myTasks: () => once("my-tasks", () => qc.prefetchQuery(myTasksOptions(ws, "all"))),
 });
 

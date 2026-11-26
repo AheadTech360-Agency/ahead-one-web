@@ -10,6 +10,10 @@ import {
   formatCount,
   groupTimeline,
   parseClientParam,
+  parseProjectParam,
+  projectsForPicker,
+  resolveProject,
+  scopeLevel,
   percent,
   resolveClient,
   timelineBucket,
@@ -138,5 +142,35 @@ describe("activity wording", () => {
     assert.equal(ago("2026-11-26T11:30:00Z", now), "30m");
     assert.equal(ago("2026-11-26T09:00:00Z", now), "3h");
     assert.equal(ago("2026-11-24T12:00:00Z", now), "2d");
+  });
+});
+
+describe("project scope", () => {
+  const C = "11111111-1111-4111-8111-111111111111";
+  const P = "22222222-2222-4222-8222-222222222222";
+  it("parses and levels", () => {
+    assert.equal(parseProjectParam(P.toUpperCase()), P);
+    assert.equal(parseProjectParam("nope"), undefined);
+    assert.equal(scopeLevel(undefined, P), "complete");
+    assert.equal(scopeLevel(C, undefined), "client");
+    assert.equal(scopeLevel(C, P), "project");
+  });
+  it("resolves only listed projects", () => {
+    assert.equal(resolveProject(undefined, P, [{ project_id: P }]), undefined);
+    assert.equal(resolveProject(C, P, undefined), P);
+    assert.equal(resolveProject(C, P, [{ project_id: P }]), P);
+    assert.equal(resolveProject(C, P, [{ project_id: "x" }]), undefined);
+  });
+  it("sorts picker rows and prefers projects_in_scope", () => {
+    const base = { project_id: "a", name: "A", color: "#000", open: 1, overdue: 0, done_7d: 0 };
+    const rows = projectsForPicker({ projects: [base, { ...base, project_id: "b", name: "B", overdue: 2 }] });
+    assert.deepEqual(rows.map((r) => r.project_id), ["b", "a"]);
+    const scoped = projectsForPicker({ projects: [base], projects_in_scope: [{ ...base, project_id: "z", members: 3 }] });
+    assert.deepEqual(scoped.map((r) => r.project_id), ["z"]);
+  });
+  it("viewHref keeps project only under a client", () => {
+    assert.equal(viewHref("/", "", C, P), `/?client=${C}&project=${P}`);
+    assert.equal(viewHref("/", `client=${C}&project=${P}`, undefined), "/");
+    assert.equal(viewHref("/", `client=${C}&project=${P}`, C), `/?client=${C}`);
   });
 });
