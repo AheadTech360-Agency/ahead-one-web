@@ -23,8 +23,8 @@ const cases = [
   ...(process.env.EXTRA?.split(",") ?? []).filter(Boolean).map((p) => ({ name: `owner-${p.replace(/\W/g, "")}`, role: "owner", who: "owner", path: p })),
 ];
 const only = process.env.ONLY?.split(",");
-const sizes = [{ n: "desktop", w: 1440, h: 900 }, { n: "narrow", w: 390, h: 844 }];
-const themes = ["light", "dark"];
+const sizes = [{ n: "desktop", w: 1440, h: 900 }, { n: "narrow", w: 390, h: 844 }].filter((x) => !process.env.SIZE || x.n === process.env.SIZE);
+const themes = ["light", "dark"].filter((x) => !process.env.THEME || x === process.env.THEME);
 
 const browser = await chromium.launch();
 const unknown = new Set();
@@ -49,7 +49,13 @@ for (const c of cases) {
       }
       if (p.endsWith("/dashboard")) return json(route, { kind: "personal", today: [], overdue: [], upcoming: [], mentions: [], activity: [] });
       if (p.endsWith("/members")) return json(route, members());
-      if (p.endsWith("/tree")) return json(route, []);
+      if (p.endsWith("/clients") && p.includes("/members/")) return json(route, p.includes("0000000002") ? { all_clients: false, space_ids: [CLIENT_IDS.acme, CLIENT_IDS.cedar, CLIENT_IDS.fjord] } : { all_clients: true, space_ids: [] });
+      if (p.endsWith("/audit-log")) return json(route, { items: [
+        { id: "x1", actor: members()[0].user, action: "member.role_changed", target_type: "user", target_id: "u", before: { role: "member" }, after: { role: "management" }, ip: null, created_at: new Date(Date.now() - 3600e3).toISOString() },
+        { id: "x2", actor: members()[0].user, action: "member.client_access_changed", target_type: "user", target_id: "u", before: null, after: null, ip: null, created_at: new Date(Date.now() - 86400e3).toISOString() },
+        { id: "x3", actor: members()[1].user, action: "invite.created", target_type: "invite", target_id: null, before: null, after: null, ip: null, created_at: new Date(Date.now() - 90000e3).toISOString() },
+      ], next_cursor: null });
+      if (p.endsWith("/tree")) return json(route, Object.values(CLIENT_IDS).map((id, i) => ({ id, name: ["Acme Logistics", "Birchwood Dental", "Cedar & Finch", "Delta Ridge Capital", "Ember Coffee Roasters", "Fjord Outdoors"][i], color: ["#2e5597", "#1f9a63", "#c4650a", "#7b4fb8", "#b8324a", "#0f8aa3"][i], archived: false, projects: [] })));
       if (p.endsWith("/unread-count")) return json(route, { count: 0 });
       if (p.endsWith("/files/summary")) return json(route, { count: 0, total_bytes: 0, expiring_soon: 0 });
       if (p.endsWith("/conversations") || p.includes("/notifications") || p.endsWith("/invites")) return json(route, []);
@@ -57,13 +63,18 @@ for (const c of cases) {
       return json(route, []);
     });
     await page.goto(web + c.path, { waitUntil: "networkidle" });
-    await page.waitForSelector(c.role === "member" ? "h1" : "text=Who is assigned what", { timeout: 60000 }).catch(() => console.log("timeout", c.name, s.n, theme));
+    await page.waitForSelector(c.path.startsWith("/settings") ? "text=What each role can do" : c.role === "member" ? "h1" : "text=Who is assigned what", { timeout: 60000 }).catch(() => console.log("timeout", c.name, s.n, theme));
     await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
     await page.waitForTimeout(700);
     // The app scrolls inside its sheet: grow the viewport to the content so one image shows everything.
     const sh = await page.evaluate(() => Math.max(...[...document.querySelectorAll("*")].map((e) => (e.scrollHeight > e.clientHeight + 20 && getComputedStyle(e).overflowY !== "visible" ? e.scrollHeight : 0)), 0));
     if (sh > s.h) { await page.setViewportSize({ width: s.w, height: Math.min(sh + 70, 5000) }); await page.waitForTimeout(500); }
-    await page.screenshot({ path: join(out, `${c.name}-${s.n}-${theme}.png`) });
+    if (process.env.ACT && c.path === "/settings/members") {
+      if (process.env.ACT === "role") { await page.getByRole("button", { name: /Actions for Bilal/ }).click(); await page.getByRole("menuitem", { name: "Change role" }).click(); await page.getByRole("radio", { name: /Admin/ }).click(); }
+      if (process.env.ACT === "access") { await page.getByRole("button", { name: /Client access for Omar/ }).click(); await page.getByRole("switch").click(); await page.getByRole("dialog").getByLabel("Acme Logistics").click(); }
+      await page.waitForTimeout(400);
+    }
+    await page.screenshot({ path: join(out, `${c.name}-${s.n}-${theme}${process.env.ACT ? "-" + process.env.ACT : ""}.png`) });
     await ctx.close();
   }
 }
