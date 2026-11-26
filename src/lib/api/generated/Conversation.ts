@@ -7,4 +7,8 @@ export type Conversation = { id: string, workspace_id: string, kind: Conversatio
 /**
  * DMs: both participants. Channels: empty (see member_count / members endpoint).
  */
-members: Array<UserSummary>, member_count: number, is_member: boolean, created_by: string | null, last_message: Message | null, unread_count: number, last_read_message_id: string | null, created_at: string, };
+members: Array<UserSummary>, member_count: number, is_member: boolean, created_by: string | null, last_message: Message | null, unread_count: number, last_read_message_id: string | null, 
+/**
+ * The caller muted this conversation: no push or in-app notifications except @mentions.
+ */
+muted: boolean, created_at: string, };

@@ -9,7 +9,17 @@
 
 import { safeNext } from "../../lib/safe-next.ts";
 
-export type PendingKind = "channel_message" | "task_status_changed" | "added_to_project" | "role_changed" | "member_joined";
+export type PendingKind =
+  | "channel_message"
+  | "task_status_changed"
+  | "added_to_project"
+  | "role_changed"
+  | "member_joined"
+  | "file_expiring"
+  | "invite_accepted"
+  | "client_access_changed"
+  | "project_archived"
+  | "space_archived";
 export type KnownKind =
   | "task_assigned"
   | "mentioned"
@@ -49,6 +59,11 @@ export const KIND_INFO: Record<KnownKind, KindInfo> = {
   added_to_project: { label: "Project", title: "Added to a project", description: "You are added to a project", group: "Team and access", fallback: inbox },
   role_changed: { label: "Role", title: "Role changes", description: "Your role in the workspace changes", group: "Team and access", fallback: inbox },
   member_joined: { label: "Joined", title: "New members", description: "Someone joins the workspace", group: "Team and access", fallback: inbox },
+  file_expiring: { label: "File", title: "Files about to expire", description: "A file you uploaded will be deleted soon for not being opened", group: "System", fallback: () => "/files" },
+  invite_accepted: { label: "Invite", title: "Invites accepted", description: "Someone you invited joins the workspace", group: "Team and access", fallback: () => "/settings/members" },
+  client_access_changed: { label: "Access", title: "Client access changes", description: "Your access to clients changes", group: "Team and access", fallback: inbox },
+  project_archived: { label: "Archived", title: "Projects archived", description: "A project you are on is archived", group: "Team and access", fallback: inbox },
+  space_archived: { label: "Archived", title: "Clients archived", description: "A client you work with is archived", group: "Team and access", fallback: inbox },
   app_update: { label: "App update", title: "App updates", description: "A new version of the app is available", group: "System", fallback: inbox },
 };
 

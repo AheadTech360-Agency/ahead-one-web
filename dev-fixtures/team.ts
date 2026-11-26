@@ -155,9 +155,10 @@ export function teamDashboard(who: Who, spaceId?: string, projectId?: string): T
     projects: scope ? PROJECTS.slice(0, scope.projects) : PROJECTS,
     workload: scope ? WORKLOAD.slice(0, 5).map((w) => ({ ...w, open: sc(w.open), overdue: Math.min(sc(w.open), Math.round(w.overdue * share * 2)), done_7d: sc(w.done_7d) })) : WORKLOAD,
     unassigned_open: scope ? 2 : 7,
+    projects_in_scope: (scope ? PROJECTS.slice(0, scope.projects) : PROJECTS).map((p) => ({ ...p, members: 3 })),
     recent_activity: ACTIVITY,
     files: scope ? { count: 64, total_bytes: 412_000_000, expiring_soon: 0 } : { count: 842, total_bytes: 6_480_000_000, expiring_soon: 14 },
-    scope: scope ? { space_id: scope.space_id, space_name: scope.name } : { space_id: null, space_name: null },
+    scope: scope ? { space_id: scope.space_id, space_name: scope.name, project_id: null, project_name: null } : { space_id: null, space_name: null, project_id: null, project_name: null },
     clients,
     timeline: tl,
     owner:

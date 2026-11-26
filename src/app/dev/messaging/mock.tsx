@@ -119,6 +119,7 @@ function conv(id: string, kind: "dm" | "channel", rest: Partial<Conversation>): 
     last_message: null,
     unread_count: 0,
     last_read_message_id: null,
+    muted: false,
     created_at: at(60 * 24 * 30),
     ...rest,
   };

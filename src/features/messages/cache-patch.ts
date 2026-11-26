@@ -6,7 +6,7 @@
 type Msg = { id: string; body: string; attachments: unknown[]; deleted?: boolean };
 type Page<M> = { items: M[] };
 type Conv<M> = { id: string; last_message: M | null; unread_count: number; last_read_message_id: string | null };
-export type ReadStateRow = { user_id: string; last_read_message_id: string | null };
+export type ReadStateRow = { user_id: string; last_read_message_id: string | null; last_read_at?: string | null };
 
 const newer = (a: string | null | undefined, b: string | null | undefined) => Boolean(a) && (!b || (a as string) > b);
 
@@ -59,10 +59,10 @@ export function conversationWithRead<M extends { id: string }, C extends Conv<M>
 }
 
 /** Another reader's position moved: monotonic per user, adds the user when new. */
-export function mergeReadState(list: ReadStateRow[], userId: string, messageId: string): ReadStateRow[] {
+export function mergeReadState<T extends ReadStateRow>(list: T[], userId: string, messageId: string, at: string | null = null): T[] {
   const has = list.some((r) => r.user_id === userId);
-  const next = list.map((r) => (r.user_id === userId && newer(messageId, r.last_read_message_id) ? { ...r, last_read_message_id: messageId } : r));
-  return has ? next : [...next, { user_id: userId, last_read_message_id: messageId }];
+  const next = list.map((r) => (r.user_id === userId && newer(messageId, r.last_read_message_id) ? { ...r, last_read_message_id: messageId, last_read_at: at ?? r.last_read_at } : r));
+  return has ? next : [...next, { user_id: userId, last_read_message_id: messageId, last_read_at: at } as unknown as T];
 }
 
 /** Total unread across conversations (muted ones excluded when the API marks them). */

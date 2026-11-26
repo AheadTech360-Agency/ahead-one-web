@@ -9,7 +9,6 @@ import { keepPreviousData, queryOptions, useMutation, useQuery, useQueryClient }
 import { api } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
 import { STALE } from "@/lib/cache/stale";
-import type { ProjectScopeExtras } from "./lib/logic";
 import type { MemberClients, SetMemberClients, TeamDashboard } from "@/lib/api/types";
 
 /** The project is only sent together with its client (the API ignores it otherwise). */
@@ -17,7 +16,7 @@ export const teamDashboardOptions = (ws: string | undefined, spaceId: string | u
   queryOptions({
     queryKey: qk.workspace(ws ?? "").teamDashboard(spaceId, spaceId ? projectId : undefined),
     queryFn: ({ signal }) =>
-      api<TeamDashboard & ProjectScopeExtras>(`/v1/workspaces/${ws}/dashboard/team`, {
+      api<TeamDashboard>(`/v1/workspaces/${ws}/dashboard/team`, {
         query: { space_id: spaceId, project_id: spaceId ? projectId : undefined },
         signal,
       }),

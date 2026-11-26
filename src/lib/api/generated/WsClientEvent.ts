@@ -3,4 +3,4 @@
 /**
  * Client -> server WebSocket frames.
  */
-export type WsClientEvent = { "type": "auth", token: string, } | { "type": "typing", conversation_id: string, } | { "type": "ping" };
+export type WsClientEvent = { "type": "auth", token: string, } | { "type": "typing", conversation_id: string, } | { "type": "ping" } | { "type": "viewing", conversation_id: string | null, };

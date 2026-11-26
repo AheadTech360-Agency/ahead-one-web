@@ -4,4 +4,14 @@ export type MessageQuery = {
 /**
  * Return messages older than this message id.
  */
-before?: string, limit?: number, };
+before?: string, 
+/**
+ * Catch-up after a reconnect: return messages newer than this message id, oldest first. When more
+ * remain, `next_cursor` is the id to pass as `after` next. Mutually exclusive with `before`.
+ */
+after?: string, 
+/**
+ * Also catch up on edits and deletes: messages created, edited or deleted after this time
+ * (RFC 3339), oldest first. Combine with nothing else.
+ */
+since?: string, limit?: number, };

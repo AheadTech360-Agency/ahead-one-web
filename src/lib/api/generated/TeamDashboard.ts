@@ -3,6 +3,7 @@ import type { ClientSummary } from "./ClientSummary";
 import type { DayCount } from "./DayCount";
 import type { FilesSummary } from "./FilesSummary";
 import type { OwnerExtras } from "./OwnerExtras";
+import type { ProjectInScope } from "./ProjectInScope";
 import type { TeamActivityItem } from "./TeamActivityItem";
 import type { TeamProjectRow } from "./TeamProjectRow";
 import type { TeamScope } from "./TeamScope";
@@ -10,7 +11,11 @@ import type { TeamTotals } from "./TeamTotals";
 import type { TeamWorkloadRow } from "./TeamWorkloadRow";
 import type { Timeline } from "./Timeline";
 
-export type TeamDashboard = { scope: TeamScope, clients: Array<ClientSummary>, timeline: Timeline, 
+export type TeamDashboard = { scope: TeamScope, clients: Array<ClientSummary>, 
+/**
+ * All projects the caller can access in the selected client (empty when no client is selected).
+ */
+projects_in_scope: Array<ProjectInScope>, timeline: Timeline, 
 /**
  * Open tasks with nobody assigned.
  */

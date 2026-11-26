@@ -4,4 +4,9 @@ export type TeamQuery = {
 /**
  * Limit the dashboard to one client (space).
  */
-space_id?: string, };
+space_id?: string, 
+/**
+ * Limit the dashboard to one project. With `space_id` too, the project must belong to that space
+ * (404 otherwise); on its own the space is derived from the project.
+ */
+project_id?: string, };

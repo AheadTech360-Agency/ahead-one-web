@@ -6,4 +6,8 @@ import type { UserSummary } from "./UserSummary";
 /**
  * Server -> client WebSocket frames.
  */
-export type WsServerEvent = { "type": "ready", user_id: string, } | { "type": "message.created", message: Message, } | { "type": "message.updated", message: Message, } | { "type": "message.deleted", conversation_id: string, message_id: string, } | { "type": "typing", conversation_id: string, user: UserSummary, } | { "type": "read", conversation_id: string, user_id: string, message_id: string, } | { "type": "notification.created", notification: Notification, } | { "type": "conversation.updated", conversation_id: string, } | { "type": "pong" } | { "type": "reauth" };
+export type WsServerEvent = { "type": "ready", user_id: string, } | { "type": "message.created", message: Message, } | { "type": "message.updated", message: Message, } | { "type": "message.deleted", conversation_id: string, message_id: string, } | { "type": "typing", conversation_id: string, user: UserSummary, } | { "type": "read", conversation_id: string, user_id: string, 
+/**
+ * Same as `last_read_message_id` (kept for older clients).
+ */
+message_id: string, last_read_message_id: string, at: string, } | { "type": "notification.updated", notification: Notification, } | { "type": "notification.created", notification: Notification, } | { "type": "conversation.updated", conversation_id: string, } | { "type": "pong" } | { "type": "reauth" };
