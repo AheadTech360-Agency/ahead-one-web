@@ -10,4 +10,8 @@ all_clients?: boolean,
 /**
  * Owner view only, and only for Admins: the clients (space ids) a limited Admin may reach.
  */
-space_ids?: Array<string>, };
+space_ids?: Array<string>, 
+/**
+ * Owner and Admin views only: whether this person signs in with two-factor.
+ */
+two_factor_enabled?: boolean, };
