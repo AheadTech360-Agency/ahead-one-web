@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, CircleAlert, FolderOpen, Hash, Info, Lock, RotateCw, Users, WifiOff } from "lucide-react";
+import { Bell, BellOff, ChevronLeft, CircleAlert, FolderOpen, Hash, Info, Lock, MoreHorizontal, RotateCw, Users, WifiOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,8 +13,9 @@ import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty-state";
 import { IconButton } from "@/ui/icon-button";
 import { toast } from "@/ui/toaster";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/menu";
 import { useRealtimeStatus } from "@/features/realtime/provider";
-import { useChannelMembers, useConversation, useJoinChannel, useMarkRead, useMessages, useReadStates, useSendMessage } from "./api";
+import { useChannelMembers, useConversation, useJoinChannel, useMarkRead, useMessages, useMuteConversation, useReadStates, useSendMessage } from "./api";
 import { shouldMarkRead } from "./receipts";
 import { ConversationFiles } from "@/features/files/conversation-files";
 import { ChannelDetails } from "./channel-details";
@@ -33,6 +34,38 @@ function ConnectionNote() {
       <WifiOff className="size-3" aria-hidden />
       {status === "offline" ? "Offline" : "Reconnecting"}
     </span>
+  );
+}
+
+/** The `muted` field lands with the API's mute endpoint; until it is generated, read it defensively. */
+function isMuted(c: Conversation) {
+  return (c as Conversation & { muted?: boolean }).muted === true;
+}
+
+function ConversationMenu({ c }: { c: Conversation }) {
+  const mute = useMuteConversation();
+  const muted = isMuted(c);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconButton label={muted ? "Conversation options (muted)" : "Conversation options"}>
+          {muted ? <BellOff aria-hidden /> : <MoreHorizontal aria-hidden />}
+        </IconButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onSelect={() =>
+            mute.mutate(
+              { id: c.id, muted: !muted },
+              { onError: (e) => toast.error(muted ? "Couldn't unmute" : "Couldn't mute", { description: errorMessage(e) }) },
+            )
+          }
+        >
+          {muted ? <Bell aria-hidden /> : <BellOff aria-hidden />}
+          {muted ? "Unmute notifications" : "Mute notifications"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -73,6 +106,7 @@ function Header({ c, meId, onDetails, onFiles }: { c: Conversation; meId?: strin
         </p>
       </div>
       <ConnectionNote />
+      {c.is_member && <ConversationMenu c={c} />}
       {c.is_member && (
         <IconButton label="Files in this conversation" onClick={onFiles}>
           <FolderOpen aria-hidden />

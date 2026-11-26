@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell/app-shell";
 import { MessagesDialogs } from "@/features/messages/dialogs";
 import { LiveNotificationToasts } from "@/features/notifications/live-toasts";
 import { PushLoginPrompt, PushSync } from "@/features/push/push-controls";
+import { ConnectionBanner, UnreadIndicator } from "@/features/realtime/connection-ui";
 import { RealtimeProvider } from "@/features/realtime/provider";
 import { Skeleton } from "@/ui/skeleton";
 
@@ -18,6 +19,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
           <MessagesDialogs />
           <LiveNotificationToasts />
+          <ConnectionBanner />
+          <UnreadIndicator />
           <PushSync />
           <PushLoginPrompt />
         </AppShell>

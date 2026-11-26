@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDistanceToNowStrict, isSameDay } from "date-fns";
-import { Bell, Check, CheckCheck, CircleAlert, RotateCw } from "lucide-react";
+import { Check, CheckCheck, CircleAlert, RotateCw } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
 import { errorMessage } from "@/lib/api/client";
 import { useNotifications } from "@/lib/api/hooks";
@@ -15,7 +15,7 @@ import { Skeleton } from "@/ui/skeleton";
 import { Spinner } from "@/ui/spinner";
 import { dayLabel } from "@/features/messages/format";
 import { useMarkRead } from "./api";
-import { kindIcon } from "./kind-icons";
+import { KindIcon } from "./kind-icons";
 import { kindInfo } from "./kinds";
 
 /** Due dates are the only kinds that carry colour: they ask for action. */
@@ -33,7 +33,6 @@ export function NotificationRow({
   onOpen: (n: Notification) => void;
   dense?: boolean;
 }) {
-  const Icon = kindIcon(n.kind);
   const unread = !n.read_at;
   const markRead = useMarkRead();
   return (
@@ -52,7 +51,7 @@ export function NotificationRow({
             <Avatar user={n.actor} size="md" decorative />
           ) : (
             <span className={cn("flex size-8 items-center justify-center rounded-full bg-active text-fg-muted", KIND_TONE[n.kind])}>
-              <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+              <KindIcon kind={n.kind} className="size-4" strokeWidth={1.75} />
             </span>
           )}
         </span>
@@ -61,7 +60,7 @@ export function NotificationRow({
           {n.body && <span className={cn("mt-0.5 line-clamp-2 block text-12", unread ? "text-fg" : "text-fg-muted")}>{n.body}</span>}
           <span className="mt-1 flex items-center gap-1.5 text-11 text-fg-faint">
             <span className={cn("inline-flex items-center gap-1 font-medium", KIND_TONE[n.kind] ?? "text-fg-muted")}>
-              <Icon className="size-3" strokeWidth={2} aria-hidden />
+              <KindIcon kind={n.kind} className="size-3" strokeWidth={2} />
               {kindInfo(n.kind).label}
             </span>
             <time dateTime={n.created_at}>{formatDistanceToNowStrict(new Date(n.created_at), { addSuffix: true })}</time>

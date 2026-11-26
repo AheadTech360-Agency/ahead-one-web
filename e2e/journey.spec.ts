@@ -161,6 +161,24 @@ test("owner opens the conversation and sees the message in the thread", async ()
   await expect(owner.getByText(dmText).first()).toBeVisible();
 });
 
+test("live chat: a reply appears for the teammate without a reload and the receipt flips to seen", async () => {
+  test.setTimeout(120_000);
+  const replyText = `Reply from owner ${run.ts}`;
+  // The teammate has the conversation open (they sent the DM there); the owner has it open too.
+  await expect(member).toHaveURL(/\/messages\//);
+  const ownerBox = owner.getByLabel(`Message ${run.memberName}`);
+  await ownerBox.fill(replyText);
+  await ownerBox.press("Enter");
+
+  // No page.reload() anywhere: the socket delivers it.
+  await expect(member.getByText(replyText).first()).toBeVisible({ timeout: 30_000 });
+
+  // The owner's message shows one tick (sent) until the teammate has read it, then two coloured ticks (seen).
+  // The teammate's page is visible and focused, so it marks the conversation read on arrival.
+  const row = owner.locator("[data-message-id]").filter({ hasText: replyText });
+  await expect(row.getByRole("img", { name: "Seen" })).toBeVisible({ timeout: 30_000 });
+});
+
 test("teammate signs out, a wrong password is refused, then signing in again needs no code", async () => {
   await member.getByRole("button", { name: "Account menu" }).click();
   await member.getByRole("menuitem", { name: "Sign out" }).click();

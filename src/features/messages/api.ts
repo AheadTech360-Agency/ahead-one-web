@@ -241,6 +241,26 @@ export function useDeleteMessage() {
   });
 }
 
+/**
+ * PUT /v1/conversations/{id}/mute with `{ muted }`. Optimistic; rolled back on failure. Muted
+ * conversations stop notifying and do not count towards the tab badge. (The request body and the
+ * `muted` field on Conversation are the API agent's contract; not in the generated types yet.)
+ */
+export function useMuteConversation() {
+  const qc = useQueryClient();
+  type Muted = Conversation & { muted?: boolean };
+  return useMutation({
+    mutationFn: ({ id, muted }: { id: string; muted: boolean }) => api<void>(`/v1/conversations/${id}/mute`, { method: "PUT", body: { muted } }),
+    onMutate: ({ id, muted }) => {
+      updateConversation(qc, id, (c) => ({ ...c, muted }) as Muted);
+      return { id, muted };
+    },
+    onError: (_e, { id, muted }) => {
+      updateConversation(qc, id, (c) => ({ ...c, muted: !muted }) as Muted);
+    },
+  });
+}
+
 /** POST /read; the badge clears locally first. Failures are silent: the next read retries. */
 export function useMarkRead() {
   const qc = useQueryClient();

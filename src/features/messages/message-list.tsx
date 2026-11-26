@@ -17,6 +17,8 @@ import { Tooltip } from "@/ui/tooltip";
 import { useDeleteMessage, useEditMessage, useMessages, useSendMessage } from "./api";
 import { newer } from "./cache";
 import { Composer } from "./composer";
+import { DmTicks, SeenBy } from "./receipt-marks";
+import { dmReceipt, latestOwn, readerIds } from "./receipts";
 import {
   continues,
   conversationName,
@@ -83,6 +85,8 @@ function MessageRow({
   editing,
   onEdit,
   onEditDone,
+  receipt,
+  belowReceipt,
 }: {
   m: Message;
   /** Arrived while the conversation was open: fade in. */
@@ -94,6 +98,10 @@ function MessageRow({
   editing: boolean;
   onEdit: () => void;
   onEditDone: () => void;
+  /** DM ticks, shown at the row's right edge for the sender's own messages. */
+  receipt?: React.ReactNode;
+  /** Channel "Seen by N", under the sender's latest message. */
+  belowReceipt?: React.ReactNode;
 }) {
   const mine = Boolean(meId && m.author?.id === meId);
   const edit = useEditMessage();
@@ -150,9 +158,11 @@ function MessageRow({
               <MessageText body={m.body} people={people} meId={meId} edited={Boolean(m.edited_at)} className="text-14 leading-[22px] text-fg" />
             )}
             <Attachments items={m.attachments} />
+            {belowReceipt}
           </>
         )}
       </div>
+      {receipt && !m.deleted && !editing && <span className="mt-1.5 shrink-0 self-end pb-0.5 group-hover/row:invisible">{receipt}</span>}
 
       {!m.deleted && !editing && (
         <div
@@ -394,12 +404,13 @@ export function MessageList({
     });
   }, [rows, readAtOpen, meId]);
 
-  // Seen: in a DM, the other person has read up to (or past) your newest message.
-  const seen = useMemo(() => {
-    if (conversation.kind !== "dm" || !newest || newest.author?.id !== meId) return false;
-    const other = readStates?.find((r) => r.user_id !== meId);
-    return Boolean(other?.last_read_message_id && !newer(newest.id, other.last_read_message_id));
-  }, [conversation.kind, newest, meId, readStates]);
+  // Receipts. DM: ticks on each of your messages. Channel: who has read your latest message.
+  const latestMineId = useMemo(() => latestOwn(messages, meId)?.id, [messages, meId]);
+  const readers = useMemo(() => {
+    if (conversation.kind !== "channel" || !latestMineId || !meId) return [];
+    const byId = new Map(candidates.map((u) => [u.id, u]));
+    return readerIds(latestMineId, meId, readStates).map((id) => byId.get(id)).filter((u): u is UserSummary => Boolean(u));
+  }, [conversation.kind, latestMineId, meId, readStates, candidates]);
 
   // Infinite scroll upward.
   useEffect(() => {
@@ -489,6 +500,12 @@ export function MessageList({
                     editing={editingId === r.m.id}
                     onEdit={() => setEditingId(r.m.id)}
                     onEditDone={() => setEditingId(null)}
+                    receipt={
+                      conversation.kind === "dm" && meId && r.m.author?.id === meId && !r.m.deleted ? (
+                        <DmTicks state={dmReceipt(r.m.id, meId, readStates)} />
+                      ) : undefined
+                    }
+                    belowReceipt={r.m.id === latestMineId && conversation.kind === "channel" ? <SeenBy readers={readers} /> : undefined}
                   />
                 ) : (
                   <PendingRow
@@ -504,11 +521,6 @@ export function MessageList({
               </Fragment>
             );
           })}
-          {seen && pending.length === 0 && (
-            <p className="flex items-center justify-end gap-1 px-5 pt-0.5 text-11 text-fg-faint">
-              <Check className="size-3" aria-hidden /> Seen
-            </p>
-          )}
         </div>
       </div>
       {!atBottom && (
