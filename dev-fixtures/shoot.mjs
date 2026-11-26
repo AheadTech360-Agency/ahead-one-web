@@ -3,7 +3,7 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { CLIENT_IDS, WS, me, members, teamDashboard } from "./team.ts";
+import { CLIENT_IDS, PROJECTS, WS, me, members, teamDashboard } from "./team.ts";
 
 const out = process.argv[2];
 const web = process.argv[3] ?? "http://localhost:3200";
@@ -18,6 +18,9 @@ const cases = [
   { name: "owner-client", role: "owner", who: "owner", path: `/?client=${CLIENT_IDS.acme}` },
   { name: "admin-complete", role: "admin", who: "admin", path: "/" },
   { name: "admin-client", role: "admin", who: "admin", path: `/?client=${CLIENT_IDS.cedar}` },
+  { name: "owner-project", role: "owner", who: "owner", path: `/?client=${CLIENT_IDS.acme}&project=${PROJECTS[1].project_id}` },
+  { name: "admin-project", role: "admin", who: "admin", path: `/?client=${CLIENT_IDS.cedar}&project=${PROJECTS[0].project_id}` },
+  { name: "owner-project-pick", role: "owner", who: "owner", path: `/?client=${CLIENT_IDS.acme}&project=${PROJECTS[1].project_id}`, act: "pick" },
   { name: "admin-scoped", role: "admin", who: "adminScoped", path: "/" },
   { name: "member", role: "member", who: "management", path: "/" },
   ...(process.env.EXTRA?.split(",") ?? []).filter(Boolean).map((p) => ({ name: `owner-${p.replace(/\W/g, "")}`, role: "owner", who: "owner", path: p })),
@@ -45,7 +48,7 @@ for (const c of cases) {
       if (p.endsWith("/dashboard/team")) {
         if (c.role === "member") return json(route, { error: { code: "forbidden", message: "forbidden" } }, 403);
         const sp = url.searchParams.get("space_id") ?? undefined;
-        return json(route, teamDashboard(c.who, sp));
+        return json(route, teamDashboard(c.who, sp, url.searchParams.get("project_id") ?? undefined));
       }
       if (p.endsWith("/dashboard")) return json(route, { kind: "personal", today: [], overdue: [], upcoming: [], mentions: [], activity: [] });
       if (p.endsWith("/members")) return json(route, members());
@@ -74,6 +77,7 @@ for (const c of cases) {
       if (process.env.ACT === "access") { await page.getByRole("button", { name: /Client access for Omar/ }).click(); await page.getByRole("switch").click(); await page.getByRole("dialog").getByLabel("Acme Logistics").click(); }
       await page.waitForTimeout(400);
     }
+    if (c.act === "pick") { await page.getByRole("button", { name: "Choose a project" }).click(); await page.waitForTimeout(300); }
     await page.screenshot({ path: join(out, `${c.name}-${s.n}-${theme}${process.env.ACT ? "-" + process.env.ACT : ""}.png`) });
     await ctx.close();
   }

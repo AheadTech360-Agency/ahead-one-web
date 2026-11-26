@@ -15,9 +15,9 @@ export function DmTicks({ state, className }: { state: "sent" | "seen"; classNam
       role="img"
       aria-label={state === "seen" ? "Seen" : "Sent"}
       title={state === "seen" ? "Seen" : "Sent"}
-      className={cn("inline-flex shrink-0 items-center transition-colors duration-[var(--dur-base)]", state === "seen" ? "text-accent-text" : "text-fg-faint", className)}
+      className={cn("inline-flex shrink-0 items-center transition-colors duration-[var(--dur-base)]", state === "seen" ? "text-chart-1" : "text-fg-faint", className)}
     >
-      <Icon className="size-3.5" strokeWidth={2} aria-hidden />
+      <Icon className="size-4" strokeWidth={2} aria-hidden />
     </span>
   );
 }

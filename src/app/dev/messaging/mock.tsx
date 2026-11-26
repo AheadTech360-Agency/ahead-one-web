@@ -203,9 +203,19 @@ function seed(qc: QueryClient, empty: boolean) {
   qc.setQueryData(chatKeys.messages(C_EMPTY), page([]));
   qc.setQueryData(chatKeys.members(C_LAUNCH), [ME, MAYA, DANIEL, PRIYA, TOMAS, HANNAH]);
   qc.setQueryData(chatKeys.members(C_EMPTY), [ME, KENJI, TOMAS]);
+  // DM: Maya has read up to your first message, so the newer one still shows a single tick.
   qc.setQueryData(chatKeys.readStates(D_MAYA), [
     { user_id: ME.id, last_read_message_id: dmMaya.at(-1)!.id },
-    { user_id: MAYA.id, last_read_message_id: dmMaya.at(-1)!.id },
+    { user_id: MAYA.id, last_read_message_id: dmMaya[1].id },
+  ]);
+  // Channel: four people have read your latest message ("Seen by 4"), Hannah has not.
+  qc.setQueryData(chatKeys.readStates(C_LAUNCH), [
+    { user_id: ME.id, last_read_message_id: launchMessages.at(-1)!.id },
+    { user_id: MAYA.id, last_read_message_id: launchMessages.at(-1)!.id },
+    { user_id: DANIEL.id, last_read_message_id: launchMessages.at(-1)!.id },
+    { user_id: PRIYA.id, last_read_message_id: launchMessages[5].id },
+    { user_id: TOMAS.id, last_read_message_id: launchMessages[3].id },
+    { user_id: HANNAH.id, last_read_message_id: null },
   ]);
   const list = (items: Notification[]) => ({ pages: [{ items, next_cursor: null }], pageParams: [undefined] });
   qc.setQueryData(qk.notifications.list(false), list(empty ? [] : notifications));

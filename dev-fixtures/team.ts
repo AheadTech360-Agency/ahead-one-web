@@ -5,6 +5,7 @@
  */
 import type { MeResponse, Member, Role, UserSummary } from "../src/lib/api/types";
 import type { ClientSummary, TeamDashboard, TimelineTask } from "../src/lib/api/types";
+import type { ProjectScopeExtras } from "../src/features/team/lib/logic";
 
 export const WS = "00000000-0000-4000-8000-0000000000aa";
 
@@ -110,7 +111,7 @@ const WORKLOAD = [
   { user: P.admin, open: 0, overdue: 0, done_7d: 1 },
 ];
 
-const PROJECTS = [
+export const PROJECTS = [
   { project_id: "30000000-0000-4000-8000-000000000001", name: "Billing portal", color: "#2e5597", open: 14, overdue: 4, done_7d: 6 },
   { project_id: "30000000-0000-4000-8000-000000000002", name: "Storefront rebuild", color: "#c4650a", open: 19, overdue: 3, done_7d: 8 },
   { project_id: "30000000-0000-4000-8000-000000000003", name: "Spring campaign", color: "#0f8aa3", open: 11, overdue: 2, done_7d: 7 },
@@ -132,7 +133,7 @@ const ACTIVITY = [
 export type Who = "owner" | "admin" | "adminScoped" | "management";
 
 /** The team dashboard as the API would answer for `who`, optionally scoped to one client. */
-export function teamDashboard(who: Who, spaceId?: string): TeamDashboard {
+export function teamDashboard(who: Who, spaceId?: string, projectId?: string): TeamDashboard & ProjectScopeExtras {
   let clients = CLIENTS;
   if (who === "adminScoped") clients = [acme, cedar, fjord];
   const scope = spaceId ? clients.find((c) => c.space_id === spaceId) : undefined;
@@ -140,7 +141,7 @@ export function teamDashboard(who: Who, spaceId?: string): TeamDashboard {
   const share = scope ? scope.open / Math.max(1, clients.reduce((n, c) => n + c.open, 0)) : 1;
   const sc = (n: number) => Math.max(0, Math.round(n * (scope ? share * 1.6 : 1)));
   const tl = scope ? scopeTimeline(scope) : TIMELINE_ALL;
-  return {
+  const base: TeamDashboard = {
     totals: {
       open_tasks: sum("open"),
       overdue_tasks: sum("overdue"),
@@ -180,6 +181,20 @@ export function teamDashboard(who: Who, spaceId?: string): TeamDashboard {
             ],
           }
         : null,
+  };
+  if (!scope) return base;
+  const inScope = PROJECTS.slice(0, scope.projects).map((p, i) => ({ ...p, members: 2 + (i % 4) }));
+  const proj = projectId ? inScope.find((p) => p.project_id === projectId) : undefined;
+  if (!proj) return { ...base, scope: { ...base.scope, project_id: null, project_name: null }, projects_in_scope: inScope };
+  const f = proj.open / Math.max(1, scope.open);
+  return {
+    ...base,
+    totals: { ...base.totals, open_tasks: proj.open, overdue_tasks: proj.overdue, completed_7d: proj.done_7d, completed_prev_7d: Math.round(proj.done_7d * 0.8), active_projects: 1, members: proj.members },
+    completed_by_day: base.completed_by_day.map((d) => ({ ...d, count: Math.round(d.count * f) })),
+    projects: [proj],
+    workload: base.workload.slice(0, 3).map((w) => ({ ...w, open: Math.max(1, Math.round(w.open * f)), overdue: Math.min(proj.overdue, w.overdue), done_7d: Math.round(w.done_7d * f) })),
+    scope: { ...base.scope, project_id: proj.project_id, project_name: proj.name },
+    projects_in_scope: inScope,
   };
 }
 
