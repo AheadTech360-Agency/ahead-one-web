@@ -14,6 +14,9 @@ import {
   taskOptions,
   tasksOptions,
 } from "@/features/tasks/api";
+import { teamDashboardOptions } from "@/features/team/api";
+import { canSeeTeamDashboard } from "@/features/team/lib/logic";
+import type { Role } from "./types";
 import { preloadEditor } from "@/features/tasks/rich-text/lazy-editor";
 import { useWorkspace } from "@/lib/workspace";
 import { conversationsOptions, membersOptions, treeOptions } from "./hooks";
@@ -38,7 +41,7 @@ function once(key: string, fn: () => unknown) {
   void Promise.resolve(fn()).catch(() => undefined);
 }
 
-export const prefetchers = (qc: QueryClient, ws: string | undefined) => ({
+export const prefetchers = (qc: QueryClient, ws: string | undefined, role?: Role) => ({
   task: (id: string) =>
     once(`task:${id}`, () => (preloadEditor(), Promise.all([qc.prefetchQuery(taskOptions(id)), qc.prefetchInfiniteQuery({ ...commentsOptions(id), pages: 1 })]))),
   project: (id: string) =>
@@ -64,7 +67,16 @@ export const prefetchers = (qc: QueryClient, ws: string | undefined) => ({
     once(`chat:${id}`, () =>
       Promise.all([qc.prefetchQuery(conversationOptions(id)), qc.prefetchInfiniteQuery({ ...messagesOptions(id), pages: 1 })]),
     ),
-  home: () => once("home", () => Promise.all([qc.prefetchQuery(dashboardOptions(ws)), qc.prefetchQuery(membersOptions(ws))])),
+  /** Home: Owner, Admin and Management open the team dashboard; everyone else the personal one. */
+  home: () =>
+    once("home", () =>
+      canSeeTeamDashboard(role)
+        ? qc.prefetchQuery(teamDashboardOptions(ws, undefined))
+        : Promise.all([qc.prefetchQuery(dashboardOptions(ws)), qc.prefetchQuery(membersOptions(ws))]),
+    ),
+  /** One client's view of the team dashboard, warmed when the picker is hovered or focused. */
+  teamClient: (spaceId: string | undefined) =>
+    once(`team:${spaceId ?? "all"}`, () => qc.prefetchQuery(teamDashboardOptions(ws, spaceId))),
   myTasks: () => once("my-tasks", () => qc.prefetchQuery(myTasksOptions(ws, "all"))),
 });
 
@@ -72,8 +84,8 @@ export type Prefetchers = ReturnType<typeof prefetchers>;
 
 export function usePrefetchers(): Prefetchers {
   const qc = useQueryClient();
-  const { workspaceId } = useWorkspace();
-  return useMemo(() => prefetchers(qc, workspaceId), [qc, workspaceId]);
+  const { workspaceId, role } = useWorkspace();
+  return useMemo(() => prefetchers(qc, workspaceId, role), [qc, workspaceId, role]);
 }
 
 /** Props that run `run` on hover, keyboard focus or touch start (intent), whichever comes first. */
@@ -86,9 +98,9 @@ export function intent(run: () => void) {
  * the dashboard, My tasks, the member list, and the newest conversations. Persisted data that is
  * still fresh is not refetched, so this only costs requests on a cold or stale cache.
  */
-export function warmAfterLoad(qc: QueryClient, ws: string) {
+export function warmAfterLoad(qc: QueryClient, ws: string, role?: Role) {
   const run = () => {
-    const p = prefetchers(qc, ws);
+    const p = prefetchers(qc, ws, role);
     p.home();
     p.myTasks();
     void qc.prefetchQuery(treeOptions(ws));

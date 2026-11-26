@@ -24,7 +24,7 @@ export function cacheBuster(build: string | undefined): string {
 
 type Key = readonly unknown[];
 
-const WS_KINDS = new Set(["members", "tree", "conversations", "dashboard", "my-tasks"]);
+const WS_KINDS = new Set(["members", "tree", "conversations", "dashboard", "team-dashboard", "my-tasks"]);
 const CHAT_KINDS = new Set(["detail", "messages", "members", "read-states"]);
 const NOTIFICATION_KINDS = new Set(["list", "unread-count"]);
 
