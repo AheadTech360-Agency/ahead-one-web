@@ -80,7 +80,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!client) return;
     const offEvents = client.subscribe((ev) => applyEvent(qc, ev, client.userId));
-    const offReconnect = client.onReconnect(() => {
+    const offReconnect = client.onCatchUp(() => {
       void qc.invalidateQueries({ predicate: (q) => q.queryKey[0] === "ws" && q.queryKey[2] === "conversations" });
       void qc.invalidateQueries({ queryKey: chatKeys.all });
       void qc.invalidateQueries({ queryKey: qk.notifications.all });
