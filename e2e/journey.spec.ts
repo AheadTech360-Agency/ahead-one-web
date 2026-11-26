@@ -104,7 +104,7 @@ test("owner creates a task assigned to the teammate", async () => {
   await owner.getByRole("option", { name: new RegExp(run.memberName) }).click();
   await owner.keyboard.press("Escape");
   await dialog.getByRole("button", { name: "Create task" }).click();
-  await owner.getByRole("button", { name: "Open" }).click();
+  await owner.getByRole("button", { name: "Open", exact: true }).click();
   await expect(owner.getByRole("heading", { name: taskTitle })).toBeVisible();
 });
 
@@ -117,7 +117,8 @@ async function unreadCount(page: Page): Promise<number> {
 test("teammate is notified live of the assignment", async () => {
   // The teammate has been sitting on the Home page the whole time: this only arrives over the WebSocket.
   await expect.poll(() => unreadCount(member), { timeout: 45_000, intervals: [500, 1000] }).toBeGreaterThanOrEqual(1);
-  await expect(member.getByRole("button", { name: "Open" }).first()).toBeVisible();
+  // The toast is short lived and can be gone by now; the sidebar Inbox badge is the durable signal.
+  await expect(member.getByRole("link", { name: /^Inbox/ })).toContainText(/\d/);
 });
 
 test("owner comments with an @mention of the teammate", async () => {
@@ -156,7 +157,7 @@ test("teammate sends a direct message and the owner receives it live", async () 
 });
 
 test("owner opens the conversation and sees the message in the thread", async () => {
-  await owner.getByRole("button", { name: "Open" }).last().click();
+  await owner.getByRole("button", { name: "Open", exact: true }).last().click();
   await expect(owner).toHaveURL(/\/messages\//);
   await expect(owner.getByText(dmText).first()).toBeVisible();
 });
