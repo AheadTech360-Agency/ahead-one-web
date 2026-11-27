@@ -19,7 +19,8 @@ export type PendingKind =
   | "invite_accepted"
   | "client_access_changed"
   | "project_archived"
-  | "space_archived";
+  | "space_archived"
+  | "app_connected";
 export type KnownKind =
   | "task_assigned"
   | "mentioned"
@@ -64,6 +65,7 @@ export const KIND_INFO: Record<KnownKind, KindInfo> = {
   client_access_changed: { label: "Access", title: "Client access changes", description: "Your access to clients changes", group: "Team and access", fallback: inbox },
   project_archived: { label: "Archived", title: "Projects archived", description: "A project you are on is archived", group: "Team and access", fallback: inbox },
   space_archived: { label: "Archived", title: "Clients archived", description: "A client you work with is archived", group: "Team and access", fallback: inbox },
+  app_connected: { label: "App", title: "Apps connected", description: "An AI app is connected to your account", group: "Team and access", fallback: () => "/settings/connected-apps" },
   app_update: { label: "App update", title: "App updates", description: "A new version of the app is available", group: "System", fallback: inbox },
 };
 

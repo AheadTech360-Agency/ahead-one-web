@@ -16,6 +16,7 @@ export function SettingsNav() {
       title: "Account",
       items: [
         { href: "/settings", label: "Profile and preferences" },
+        { href: "/settings/connected-apps", label: "Connected apps" },
         { href: "/settings/android-app", label: "Android app", hidden: !canSeeAppRelease(role) },
       ].filter((i) => !i.hidden),
     },

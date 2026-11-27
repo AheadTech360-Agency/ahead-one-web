@@ -19,6 +19,19 @@ const ok = (queryKey: unknown[], data: unknown = {}, extra: object = {}) => ({
   ...extra,
 });
 
+describe("OAuth consent and grants are never persisted", () => {
+  it("refuses request and grant keys", () => {
+    for (const key of [
+      ["oauth", "request", "abcdefgh"],
+      ["oauth", "grants", "mine"],
+      ["oauth", "grants", "everyone"],
+    ]) {
+      assert.equal(isPersistableKey(key), false);
+      assert.equal(shouldPersistQuery(ok(key)), false);
+    }
+  });
+});
+
 describe("app release is never persisted", () => {
   it("refuses both app-release keys and an opted-out query", () => {
     const keys = [

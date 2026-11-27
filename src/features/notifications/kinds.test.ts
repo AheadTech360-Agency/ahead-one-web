@@ -18,6 +18,10 @@ describe("notification kinds", () => {
       assert.ok(v.fallback({}).startsWith("/"), k);
     }
   });
+  it("app_connected opens Connected apps", () => {
+    assert.equal(kindInfo("app_connected").label, "App");
+    assert.equal(deepLink("app_connected", undefined), "/settings/connected-apps");
+  });
   it("unknown kinds degrade to a generic row", () => {
     assert.equal(kindInfo("brand_new").label, "Update");
     assert.equal(deepLink("brand_new", undefined), "/inbox");

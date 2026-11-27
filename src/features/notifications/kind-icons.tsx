@@ -11,6 +11,7 @@ import {
   MessagesSquare,
   RefreshCcw,
   KeyRound,
+  PlugZap,
   ShieldCheck,
   Smartphone,
   UserCheck,
@@ -39,6 +40,7 @@ export const KIND_ICON: Record<NotificationKind | KnownKind, LucideIcon> = {
   client_access_changed: KeyRound,
   project_archived: Archive,
   space_archived: Archive,
+  app_connected: PlugZap,
   app_update: Smartphone,
 };
 
