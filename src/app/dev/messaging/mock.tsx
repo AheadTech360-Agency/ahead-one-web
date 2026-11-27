@@ -18,6 +18,7 @@ import { ConversationList } from "@/features/messages/conversation-list";
 import { ConversationView } from "@/features/messages/conversation-view";
 import { MessagesDialogs } from "@/features/messages/dialogs";
 import { MessagesIndex } from "@/features/messages/messages-index";
+import { applyNewMessage } from "@/features/messages/cache";
 import { noteTyping, openMessagesDialog, pendingStore } from "@/features/messages/stores";
 import { InboxView } from "@/features/notifications/inbox";
 
@@ -247,6 +248,17 @@ function Mock() {
     seed(client, empty);
     return client;
   });
+
+  // Dev-only: lets a browser test deliver an incoming message through the real cache path.
+  useEffect(() => {
+    const w = window as unknown as { __incoming?: (body: string, mine?: boolean) => void };
+    w.__incoming = (body, mine = false) => {
+      applyNewMessage(qc, msg(c, mine ? ME : MAYA, 0, body), ME.id, true);
+    };
+    return () => {
+      delete w.__incoming;
+    };
+  }, [qc, c]);
 
   useEffect(() => {
     if (params.get("typing") === "1") {
