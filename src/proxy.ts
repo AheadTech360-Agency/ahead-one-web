@@ -8,7 +8,7 @@ import { REFRESH_COOKIE } from "@/lib/auth/cookie";
  * (a stale cookie is cleared by /api/auth/session or /api/auth/logout).
  */
 
-const PUBLIC_PREFIXES = ["/login", "/forgot-password", "/reset-password", "/invite/"];
+const PUBLIC_PREFIXES = ["/login", "/forgot-password", "/reset-password", "/invite/", "/docs/"];
 const SIGNED_OUT_ONLY = ["/login", "/forgot-password"];
 
 function isPublic(pathname: string) {

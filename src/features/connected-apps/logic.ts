@@ -5,7 +5,7 @@
  */
 
 export const MCP_URL = "https://ahead-one-api-production.up.railway.app/mcp";
-export const DOCS_URL = "https://ahead-one-api-production.up.railway.app/docs/mcp";
+export const DOCS_URL = "/docs/mcp";
 
 /* ---------- redirect validation ---------- */
 
