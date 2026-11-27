@@ -6,21 +6,20 @@ import { useWorkspace } from "@/lib/workspace";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { toast } from "@/ui/toaster";
 import { useOAuthGrants, useRevokeGrant } from "./api";
-import type { OAuthGrant } from "./contract";
+import type { OauthGrant } from "@/lib/api/types";
 import { GrantsPanel, SetupGuide } from "./grants-panel";
-import { canRevoke, canSeeEveryonesApps } from "./logic";
+import { canSeeEveryonesApps } from "./logic";
 
 /** Settings, Connected apps: my grants, plus an Owner-only tab with everyone's. */
 export function ConnectedAppsView() {
-  const { role, me } = useWorkspace();
-  const meId = me?.user.id;
+  const { role, workspaceId } = useWorkspace();
   const owner = canSeeEveryonesApps(role);
-  const mine = useOAuthGrants(false);
-  const everyone = useOAuthGrants(true, owner);
+  const mine = useOAuthGrants(undefined);
+  const everyone = useOAuthGrants(workspaceId, owner && Boolean(workspaceId));
   const revoke = useRevokeGrant();
 
-  function onRevoke(g: OAuthGrant) {
-    revoke.mutate(g, {
+  function onRevoke(g: OauthGrant, viaWorkspace = false) {
+    revoke.mutate({ grant: g, viaWorkspace }, {
       onSuccess: () => toast.success(`Revoked ${g.client_name}`, { description: "It can no longer reach the account." }),
       onError: (e) => toast.error(`Couldn't revoke ${g.client_name}`, { description: `${errorMessage(e)} It is back in the list.` }),
     });
@@ -34,7 +33,7 @@ export function ConnectedAppsView() {
         error={mine.isError ? errorMessage(mine.error) : undefined}
         onRetry={() => void mine.refetch()}
         showUser={false}
-        canRevoke={(g) => canRevoke(role, g.user.id, meId)}
+        canRevoke={() => true}
         onRevoke={onRevoke}
       />
       {mine.data && mine.data.length > 0 && <SetupGuide />}
@@ -62,7 +61,7 @@ export function ConnectedAppsView() {
                 onRetry={() => void everyone.refetch()}
                 showUser
                 canRevoke={() => true}
-                onRevoke={onRevoke}
+                onRevoke={(g) => onRevoke(g, true)}
                 emptyIsSetup={false}
               />
             </TabsContent>

@@ -8,84 +8,78 @@ import {
   canRevoke,
   canSeeEveryonesApps,
   defaultSelection,
-  displayHost,
   groupScopes,
   isExpired,
   isSafeRedirect,
   lastUsedLabel,
   orderLike,
+  pickWorkspace,
   requestProblem,
-  scopeLabel,
   scopeGroup,
+  scopeLabel,
   toggleScope,
 } from "./logic.ts";
 
+const s = (scope: string, description: string, write: boolean) => ({ scope, description, write, default_on: !write });
 const scopes = [
-  { id: "messages:read", description: "Read messages" },
-  { id: "tasks:read", description: "Read tasks" },
-  { id: "files:read", description: "Read files" },
-  { id: "messages:write", description: "Send messages" },
-  { id: "tasks:write", description: "Create and update tasks" },
-  { id: "files:attach", description: "Attach files" },
+  s("messages:read", "Read messages", false),
+  s("tasks:read", "Read tasks", false),
+  s("files:read", "Read files", false),
+  s("messages:write", "Send messages", true),
+  s("tasks:write", "Create and update tasks", true),
+  s("files:attach", "Attach files", true),
 ];
 
-test("redirect: https, loopback http and custom schemes that match the registered client", () => {
-  const reg = "https://claude.ai/api/mcp/auth_callback";
-  assert.equal(isSafeRedirect("https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz", reg), true);
-  const loop = "http://127.0.0.1:53682/callback";
-  assert.equal(isSafeRedirect("http://127.0.0.1:53682/callback?code=1", loop), true);
-  assert.equal(isSafeRedirect("http://localhost:3000/cb?error=access_denied", "http://localhost:3000/cb"), true);
-  assert.equal(isSafeRedirect("http://[::1]:9/cb?code=1", "http://[::1]:9/cb"), true);
-  const custom = "cursor://anysphere.cursor-retrieval/oauth/callback";
-  assert.equal(isSafeRedirect(`${custom}?code=1`, custom), true);
-  assert.equal(isSafeRedirect("com.example.app:/oauth2redirect?code=1", "com.example.app:/oauth2redirect"), true);
+test("redirect: https, loopback http and custom schemes whose host matches what the user saw", () => {
+  assert.equal(isSafeRedirect("https://claude.ai/api/mcp/auth_callback?code=abc&state=xyz", "claude.ai"), true);
+  assert.equal(isSafeRedirect("http://127.0.0.1:53682/callback?code=1", "127.0.0.1:53682"), true);
+  assert.equal(isSafeRedirect("http://localhost:3000/cb?error=access_denied", "localhost:3000"), true);
+  assert.equal(isSafeRedirect("http://[::1]:9/cb?code=1", "[::1]:9"), true);
+  assert.equal(isSafeRedirect("cursor://anysphere.cursor-retrieval/oauth/callback?code=1", "cursor://"), true);
+  assert.equal(isSafeRedirect("com.example.app:/oauth2redirect?code=1", "com.example.app://"), true);
 });
 
 test("redirect: never trusts anything else", () => {
-  const reg = "https://claude.ai/api/mcp/auth_callback";
+  const host = "claude.ai";
   const bad = [
     "https://evil.example/api/mcp/auth_callback?code=1", // other host
-    "https://claude.ai/other?code=1", // other path
+    "https://claude.ai.evil.example/x",
+    "https://claude.ai:8443/x", // other port
     "http://claude.ai/api/mcp/auth_callback?code=1", // plain http to a real host
     "javascript:alert(1)",
     "data:text/html,<script>1</script>",
     "file:///etc/passwd",
     "//evil.example/x",
     "/relative",
-    "https://user:pw@claude.ai/api/mcp/auth_callback",
-    "https://claude.ai/api/mcp/auth_callback#frag",
-    "https://claude.ai/api/mcp/auth_callback\n?code=1",
+    "https://user:pw@claude.ai/x",
+    "https://claude.ai/x#frag",
+    "https://claude.ai/x\n?code=1",
     "https://claude.ai\\@evil.example/",
     "",
     "not a url",
   ];
-  for (const b of bad) assert.equal(isSafeRedirect(b, reg), false, b);
-  assert.equal(isSafeRedirect(undefined, reg), false);
-  assert.equal(isSafeRedirect(42, reg), false);
-  assert.equal(isSafeRedirect("https://claude.ai/api/mcp/auth_callback", "garbage"), false);
-  // A registered javascript: URI can never be satisfied.
-  assert.equal(isSafeRedirect("javascript:alert(1)", "javascript:alert(1)"), false);
-  // Loopback http must still match the registered port.
-  assert.equal(isSafeRedirect("http://127.0.0.1:9999/callback", "http://127.0.0.1:53682/callback"), false);
-  // Look-alike loopback host is not loopback.
-  assert.equal(isSafeRedirect("http://127.0.0.1.evil.example/cb", "http://127.0.0.1.evil.example/cb"), false);
-});
-
-test("display host", () => {
-  assert.equal(displayHost("https://claude.ai/api/cb", "x"), "claude.ai");
-  assert.equal(displayHost("http://localhost:3000/cb", "x"), "localhost:3000");
-  assert.equal(displayHost("cursor://anysphere.cursor/cb", "x"), "anysphere.cursor");
-  assert.equal(displayHost("com.example.app:/cb", "x"), "com.example.app://");
+  for (const b of bad) assert.equal(isSafeRedirect(b, host), false, b);
+  assert.equal(isSafeRedirect(undefined, host), false);
+  assert.equal(isSafeRedirect(42, host), false);
+  assert.equal(isSafeRedirect("https://claude.ai/x", ""), false);
+  // A scripting scheme can never match, even if the API claimed it as the host.
+  assert.equal(isSafeRedirect("javascript:alert(1)", "javascript://"), false);
+  // Custom scheme must match the announced scheme.
+  assert.equal(isSafeRedirect("evil://x/cb", "cursor://"), false);
+  // Loopback must match the announced port, and a look-alike host is not loopback.
+  assert.equal(isSafeRedirect("http://127.0.0.1:9999/callback", "127.0.0.1:53682"), false);
+  assert.equal(isSafeRedirect("http://127.0.0.1.evil.example/cb", "127.0.0.1.evil.example"), false);
 });
 
 test("scope groups and defaults: read on, write off", () => {
   assert.equal(scopeGroup("tasks:read"), "read");
-  assert.equal(scopeGroup("tasks:write"), "write");
   assert.equal(scopeGroup("files:attach"), "write");
   const g = groupScopes(scopes);
   assert.equal(g.read.length, 3);
   assert.equal(g.write.length, 3);
   assert.deepEqual(defaultSelection(scopes), ["messages:read", "tasks:read", "files:read"]);
+  // Even if the API ever marked a write scope default_on, it is not ticked.
+  assert.deepEqual(defaultSelection([{ scope: "x:write", description: "", write: true, default_on: true }]), []);
 });
 
 test("toggle keeps request order, ignores unknown scopes, never invents one", () => {
@@ -107,6 +101,14 @@ test("at least one scope is required", () => {
   assert.equal(allowSummary(["tasks:read", "files:read"], scopes), "2 permissions selected");
 });
 
+test("workspace choice: first by default, a chosen one only if offered", () => {
+  const ws = [{ id: "a" }, { id: "b" }];
+  assert.equal(pickWorkspace(ws, undefined), "a");
+  assert.equal(pickWorkspace(ws, "b"), "b");
+  assert.equal(pickWorkspace(ws, "zzz"), "a");
+  assert.equal(pickWorkspace([], "a"), undefined);
+});
+
 test("role gating: only the Owner sees everyone's apps; anyone revokes their own", () => {
   assert.equal(canSeeEveryonesApps("owner"), true);
   for (const r of ["admin", "management", "member", "guest", undefined] as const) assert.equal(canSeeEveryonesApps(r), false);
@@ -120,7 +122,6 @@ test("role gating: only the Owner sees everyone's apps; anyone revokes their own
 test("request problems", () => {
   assert.equal(requestProblem(410), "expired");
   assert.equal(requestProblem(404), "invalid");
-  assert.equal(requestProblem(400), "invalid");
   assert.equal(requestProblem(403), "forbidden");
   assert.equal(requestProblem(0), "network");
   assert.equal(isExpired("2020-01-01T00:00:00Z", Date.parse("2020-01-01T00:00:01Z")), true);

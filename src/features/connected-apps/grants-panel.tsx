@@ -11,7 +11,7 @@ import { ConfirmDialog } from "@/ui/dialog";
 import { EmptyState } from "@/ui/empty-state";
 import { Skeleton } from "@/ui/skeleton";
 import { toast } from "@/ui/toaster";
-import type { OAuthGrant } from "./contract";
+import type { OauthGrant } from "@/lib/api/types";
 import { CLAUDE_CODE_SNIPPET, DOCS_URL, JSON_SNIPPET, MCP_URL, lastUsedLabel, scopeGroup, scopeLabel } from "./logic";
 
 export function GrantsPanel({
@@ -24,17 +24,17 @@ export function GrantsPanel({
   onRevoke,
   emptyIsSetup = true,
 }: {
-  grants: OAuthGrant[] | undefined;
+  grants: OauthGrant[] | undefined;
   loading: boolean;
   /** Message for the inline error state (only when there is nothing cached to show). */
   error?: string;
   onRetry?: () => void;
   showUser: boolean;
-  canRevoke: (g: OAuthGrant) => boolean;
-  onRevoke: (g: OAuthGrant) => void;
+  canRevoke: (g: OauthGrant) => boolean;
+  onRevoke: (g: OauthGrant) => void;
   emptyIsSetup?: boolean;
 }) {
-  const [target, setTarget] = useState<OAuthGrant | null>(null);
+  const [target, setTarget] = useState<OauthGrant | null>(null);
 
   if (loading) return <GrantsSkeleton />;
   if (error && grants === undefined) {
@@ -84,20 +84,15 @@ export function GrantsPanel({
   );
 }
 
-function GrantRow({ grant: g, showUser, canRevoke, onRevoke }: { grant: OAuthGrant; showUser: boolean; canRevoke: boolean; onRevoke: () => void }) {
+function GrantRow({ grant: g, showUser, canRevoke, onRevoke }: { grant: OauthGrant; showUser: boolean; canRevoke: boolean; onRevoke: () => void }) {
   return (
     <li className="rounded-md border border-border bg-surface p-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="break-words text-14 font-semibold text-fg">{g.client_name}</h3>
-            {g.unverified && (
-              <Badge tone="warning">
-                <TriangleAlert aria-hidden /> Unverified
-              </Badge>
-            )}
           </div>
-          {showUser && (
+          {showUser && g.user && (
             <p className="mt-1 flex items-center gap-1.5 text-12 text-fg-muted">
               <Avatar user={g.user} size="xs" decorative />
               <span className="truncate">{g.user.full_name || g.user.email}</span>

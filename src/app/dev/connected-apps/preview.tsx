@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { PageBody, PageHeader } from "@/components/page";
 import { ConsentCard, ConsentProblem, ConsentSkeleton } from "@/features/connected-apps/consent-card";
-import { FIXTURE_GRANTS, FIXTURE_REQUEST, FIXTURE_UNVERIFIED } from "@/features/connected-apps/fixtures";
+import { FIXTURE_GRANTS, FIXTURE_MULTI, FIXTURE_REQUEST, FIXTURE_UNVERIFIED } from "@/features/connected-apps/fixtures";
 import { GrantsPanel } from "@/features/connected-apps/grants-panel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
@@ -17,6 +17,8 @@ export function Preview() {
   switch (view) {
     case "unverified":
       return frame(<ConsentCard info={FIXTURE_UNVERIFIED} userName="Ayesha Khan" userEmail="ayesha@example.test" phase="idle" onDecide={noop} />);
+    case "multi":
+      return frame(<ConsentCard info={FIXTURE_MULTI} userName="Ayesha Khan" userEmail="ayesha@example.test" phase="idle" onDecide={noop} />);
     case "submitting":
       return frame(<ConsentCard info={FIXTURE_REQUEST} userName="Ayesha Khan" phase="submitting" onDecide={noop} />);
     case "error":

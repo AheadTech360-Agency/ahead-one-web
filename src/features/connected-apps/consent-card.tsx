@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { Checkbox } from "@/ui/checkbox";
 import { Skeleton } from "@/ui/skeleton";
-import type { OAuthRequestInfo } from "./contract";
-import { allowSummary, canAllow, defaultSelection, displayHost, groupScopes, orderLike, toggleScope } from "./logic";
+import type { OauthRequestInfo } from "@/lib/api/types";
+import { allowSummary, canAllow, defaultSelection, groupScopes, orderLike, pickWorkspace, toggleScope } from "./logic";
 
 export type ConsentPhase = "idle" | "submitting" | "redirecting" | "error";
 
@@ -31,16 +31,19 @@ export function ConsentCard({
   error,
   onDecide,
 }: {
-  info: OAuthRequestInfo;
+  info: OauthRequestInfo;
   userName: string | undefined;
   userEmail?: string;
   phase: ConsentPhase;
   error?: string;
-  onDecide: (approve: boolean, scopes: string[]) => void;
+  onDecide: (approve: boolean, scopes: string[], workspaceId?: string) => void;
 }) {
   const [selected, setSelected] = useState<string[]>(() => defaultSelection(info.scopes));
   const groups = groupScopes(info.scopes);
-  const host = displayHost(info.redirect_uri, info.redirect_host);
+  const host = info.redirect_host || "unknown";
+  const [wsChoice, setWsChoice] = useState<string | undefined>();
+  const workspaceId = pickWorkspace(info.workspaces, wsChoice);
+  const workspaceName = info.workspaces.find((w) => w.id === workspaceId)?.name;
   const busy = phase === "submitting" || phase === "redirecting";
   const allowed = canAllow(selected, info.scopes);
   const name = info.client_name.trim().slice(0, 80) || "An app";
@@ -80,11 +83,37 @@ export function ConsentCard({
             </div>
           )}
 
+          {info.workspaces.length > 1 ? (
+            <fieldset disabled={busy} className="mt-5">
+              <legend className="text-13 font-semibold text-fg">Connect to which workspace?</legend>
+              <div className="mt-2 flex flex-col divide-y divide-border-subtle rounded-md border border-border" role="radiogroup" aria-label="Workspace">
+                {info.workspaces.map((w) => (
+                  <label key={w.id} className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-13 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring">
+                    <input
+                      type="radio"
+                      name="workspace"
+                      value={w.id}
+                      checked={w.id === workspaceId}
+                      onChange={() => setWsChoice(w.id)}
+                      className="size-4 accent-[var(--accent)]"
+                    />
+                    <span className="min-w-0 flex-1 truncate font-medium text-fg">{w.name}</span>
+                    <span className="text-12 capitalize text-fg-muted">{w.role}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : workspaceName ? (
+            <p className="mt-4 text-13 text-fg-muted">
+              Workspace: <span className="font-medium text-fg">{workspaceName}</span>
+            </p>
+          ) : null}
+
           <form
             className="mt-6"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!busy && allowed) onDecide(true, orderLike(selected, info.scopes));
+              if (!busy && allowed) onDecide(true, orderLike(selected, info.scopes), workspaceId);
             }}
           >
             <fieldset disabled={busy} className="flex flex-col gap-5">
@@ -100,10 +129,10 @@ export function ConsentCard({
                     </h2>
                     <ul className="mt-2 flex flex-col divide-y divide-border-subtle rounded-md border border-border">
                       {groups[g].map((s) => (
-                        <li key={s.id} className="px-3 py-2.5">
+                        <li key={s.scope} className="px-3 py-2.5">
                           <Checkbox
-                            checked={selected.includes(s.id)}
-                            onCheckedChange={() => setSelected((cur) => toggleScope(cur, s.id, info.scopes))}
+                            checked={selected.includes(s.scope)}
+                            onCheckedChange={() => setSelected((cur) => toggleScope(cur, s.scope, info.scopes))}
                             label={<span className="text-13 font-medium text-fg">{s.description}</span>}
                           />
                         </li>

@@ -41,16 +41,16 @@ export function ConsentView() {
   const info = q.data;
   if (isExpired(info.expires_at)) return <ConsentProblem kind="expired" />;
 
-  function onDecide(approve: boolean, scopes: string[]) {
+  function onDecide(approve: boolean, scopes: string[], workspaceId?: string) {
     if (locked.current) return;
     locked.current = true;
     setPhase("submitting");
     setError(undefined);
     decide.mutate(
-      { approve, scopes },
+      { approve, scopes, workspace_id: workspaceId },
       {
         onSuccess: (res) => {
-          if (!isSafeRedirect(res?.redirect_url, info.redirect_uri)) {
+          if (!isSafeRedirect(res?.redirect_url, info.redirect_host)) {
             setUnsafe(true);
             return;
           }

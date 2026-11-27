@@ -2,7 +2,7 @@
 
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, isApiError } from "@/lib/api/client";
-import type { OAuthDecision, OAuthDecisionResult, OAuthGrant, OAuthRequestInfo } from "./contract";
+import type { OauthDecision, OauthDecisionResult, OauthGrant, OauthRequestInfo } from "@/lib/api/types";
 
 /*
  * Query keys start with "oauth", which is deliberately NOT on the persisted-cache allowlist
@@ -14,18 +14,20 @@ const path = {
   decision: (id: string) => `/v1/oauth/requests/${encodeURIComponent(id)}/decision`,
   grants: "/v1/oauth/grants",
   grant: (id: string) => `/v1/oauth/grants/${encodeURIComponent(id)}`,
+  wsGrants: (ws: string) => `/v1/workspaces/${encodeURIComponent(ws)}/oauth/grants`,
+  wsGrant: (ws: string, id: string) => `/v1/workspaces/${encodeURIComponent(ws)}/oauth/grants/${encodeURIComponent(id)}`,
 };
 
 export const oauthKeys = {
   request: (id: string) => ["oauth", "request", id] as const,
-  grants: (everyone: boolean) => ["oauth", "grants", everyone ? "everyone" : "mine"] as const,
+  grants: (ws?: string) => ["oauth", "grants", ws ?? "mine"] as const,
   grantsAll: ["oauth", "grants"] as const,
 };
 
 export const requestOptions = (id: string | undefined) =>
   queryOptions({
     queryKey: oauthKeys.request(id ?? ""),
-    queryFn: ({ signal }) => api<OAuthRequestInfo>(path.request(id!), { signal }),
+    queryFn: ({ signal }) => api<OauthRequestInfo>(path.request(id!), { signal }),
     enabled: Boolean(id),
     // A request is a one-time record: never refetch behind the user's back, never keep it around.
     staleTime: Infinity,
@@ -41,32 +43,34 @@ export function useOAuthRequest(id: string | undefined) {
 
 export function useOAuthDecision(id: string) {
   return useMutation({
-    mutationFn: (body: OAuthDecision) => api<OAuthDecisionResult>(path.decision(id), { method: "POST", body }),
+    mutationFn: (body: OauthDecision) => api<OauthDecisionResult>(path.decision(id), { method: "POST", body }),
   });
 }
 
-export const grantsOptions = (everyone: boolean) =>
+/** `ws` set: the Owner's listing of every grant in that workspace; unset: the apps on my account. */
+export const grantsOptions = (ws?: string) =>
   queryOptions({
-    queryKey: oauthKeys.grants(everyone),
-    queryFn: ({ signal }) =>
-      api<OAuthGrant[]>(path.grants, { signal, query: everyone ? { all: "true" } : undefined }),
+    queryKey: oauthKeys.grants(ws),
+    queryFn: ({ signal }) => api<OauthGrant[]>(ws ? path.wsGrants(ws) : path.grants, { signal }),
     staleTime: 30_000,
     meta: { persist: false },
   });
 
-export function useOAuthGrants(everyone: boolean, enabled = true) {
-  return useQuery({ ...grantsOptions(everyone), enabled });
+export function useOAuthGrants(ws: string | undefined, enabled = true) {
+  return useQuery({ ...grantsOptions(ws), enabled });
 }
 
 /** Optimistic revoke: the row leaves every grants list at once and comes back if the API refuses. */
 export function useRevokeGrant() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (grant: OAuthGrant) => api<void>(path.grant(grant.id), { method: "DELETE" }),
-    onMutate: async (grant) => {
+    // `viaWorkspace`: the Owner revoking from the workspace-wide list (someone else's grant, or any grant there).
+    mutationFn: ({ grant, viaWorkspace }: { grant: OauthGrant; viaWorkspace: boolean }) =>
+      api<void>(viaWorkspace ? path.wsGrant(grant.workspace_id, grant.id) : path.grant(grant.id), { method: "DELETE" }),
+    onMutate: async ({ grant }) => {
       await qc.cancelQueries({ queryKey: oauthKeys.grantsAll });
-      const snap = qc.getQueriesData<OAuthGrant[]>({ queryKey: oauthKeys.grantsAll });
-      qc.setQueriesData<OAuthGrant[]>({ queryKey: oauthKeys.grantsAll }, (d) => d?.filter((g) => g.id !== grant.id));
+      const snap = qc.getQueriesData<OauthGrant[]>({ queryKey: oauthKeys.grantsAll });
+      qc.setQueriesData<OauthGrant[]>({ queryKey: oauthKeys.grantsAll }, (d) => d?.filter((g) => g.id !== grant.id));
       return { snap };
     },
     onError: (_e, _g, ctx) => {

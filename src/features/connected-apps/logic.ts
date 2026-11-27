@@ -23,71 +23,71 @@ function parse(u: string): URL | null {
   }
 }
 
-/** Origin-like identity of a URL for comparing against the registered redirect (scheme, host, port, path). */
-function identity(u: URL): string {
-  return `${u.protocol}//${u.host}${u.pathname}`;
+/** The host the API reports for a redirect: "host[:port]" for http(s), "scheme://" for custom schemes. */
+function hostOf(u: URL): string {
+  return u.protocol === "https:" || u.protocol === "http:" ? u.host : `${u.protocol}//`;
+}
+
+/** Control characters, whitespace, no-break space and backslashes: browsers treat some of these as separators. */
+function hasUnsafeChar(s: string): boolean {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    if (c <= 0x20 || (c >= 0x7f && c <= 0xa0) || c === 0x5c) return true;
+  }
+  return false;
 }
 
 /**
- * Whether the browser may be sent to `candidate` after the user decided. The API returns the
- * redirect with `code`/`state` or `error` in the query, so the query may differ; everything else
- * must equal the registered redirect URI. Accepted: https, http on a loopback host, or a custom app
- * scheme (reverse-DNS style, for example `cursor://` or `com.example.app:`). Rejected: credentials in
- * the URL, fragments, scripting and file schemes, plain http to a real host, and anything that does
- * not match the registered client.
+ * Whether the browser may be sent to `candidate` after the user decided. The API returns the app's
+ * registered redirect with `code`/`state` or `error` in the query; the consent info only carries its
+ * host (`redirect_host`), so that is what is checked, together with the scheme rules. Accepted: https,
+ * http on a loopback host, or a custom app scheme (`cursor://`, `com.example.app:`). Rejected:
+ * credentials in the URL, fragments, scripting and file schemes, plain http to a real host, control
+ * characters and backslashes, and any destination whose host differs from the one shown to the user.
  */
-export function isSafeRedirect(candidate: unknown, registered: string): boolean {
+export function isSafeRedirect(candidate: unknown, redirectHost: string): boolean {
   if (typeof candidate !== "string" || candidate.length === 0 || candidate.length > 4096) return false;
-  if (/[\u0000- \u007f- \\]/.test(candidate)) return false;
+  if (!redirectHost) return false;
+  if (hasUnsafeChar(candidate)) return false;
   const url = parse(candidate);
-  const reg = parse(registered);
-  if (!url || !reg) return false;
+  if (!url) return false;
   if (url.username || url.password || url.hash) return false;
   if (FORBIDDEN_SCHEMES.has(url.protocol)) return false;
-  const scheme = url.protocol;
-  if (scheme === "https:") {
+  if (url.protocol === "https:") {
     // ok
-  } else if (scheme === "http:") {
+  } else if (url.protocol === "http:") {
     if (!LOOPBACK.has(url.hostname)) return false;
-  } else if (!/^[a-z][a-z0-9+.-]*:$/.test(scheme) || scheme === "http:" || scheme === "https:") {
+  } else if (!/^[a-z][a-z0-9+.-]*:$/.test(url.protocol)) {
     return false;
   }
-  return identity(url) === identity(reg);
-}
-
-/** The destination host shown prominently on the consent screen, taken from the registered URI. */
-export function displayHost(registered: string, apiHost: string): string {
-  const u = parse(registered);
-  if (!u) return apiHost || "unknown";
-  if (u.host) return u.host;
-  // Custom scheme without a host: show the scheme, which is what identifies the app on the device.
-  return `${u.protocol}//`;
+  return hostOf(url) === redirectHost;
 }
 
 /* ---------- scopes ---------- */
 
 export type ScopeGroup = "read" | "write";
 
-/** Scope ids look like "tasks:read" or "tasks.write"; anything containing "write", "send", "create", "update" or "attach" is a write. */
+/** Heuristic for a bare scope id (used for the chips on a grant, which carry no `write` flag). */
 export function scopeGroup(id: string): ScopeGroup {
   return /(write|send|create|update|attach|manage)/i.test(id) ? "write" : "read";
 }
 
-export type ScopeLike = { id: string; description: string };
+/** The consent info's ScopeInfo, structurally (kept local so this file stays free of "@/" imports). */
+export type ScopeLike = { scope: string; description: string; write: boolean; default_on: boolean };
 
 export function groupScopes<T extends ScopeLike>(scopes: readonly T[]): { read: T[]; write: T[] } {
   const out = { read: [] as T[], write: [] as T[] };
-  for (const s of scopes) out[scopeGroup(s.id)].push(s);
+  for (const s of scopes) out[s.write ? "write" : "read"].push(s);
   return out;
 }
 
-/** Read scopes start ON, write scopes OFF. */
+/** What the API says is on by default; a write scope is never ticked here. */
 export function defaultSelection(scopes: readonly ScopeLike[]): string[] {
-  return scopes.filter((s) => scopeGroup(s.id) === "read").map((s) => s.id);
+  return scopes.filter((s) => s.default_on && !s.write).map((s) => s.scope);
 }
 
 export function toggleScope(selected: readonly string[], id: string, requested: readonly ScopeLike[]): string[] {
-  if (!requested.some((s) => s.id === id)) return [...selected];
+  if (!requested.some((s) => s.scope === id)) return [...selected];
   const next = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
   return orderLike(next, requested);
 }
@@ -95,12 +95,18 @@ export function toggleScope(selected: readonly string[], id: string, requested: 
 /** What is actually sent: only requested scopes, in the order they were requested, no duplicates. */
 export function orderLike(selected: readonly string[], requested: readonly ScopeLike[]): string[] {
   const set = new Set(selected);
-  return requested.map((s) => s.id).filter((id) => set.has(id));
+  return requested.map((s) => s.scope).filter((id) => set.has(id));
 }
 
 /** At least one scope is required to allow. */
 export function canAllow(selected: readonly string[], requested: readonly ScopeLike[]): boolean {
   return orderLike(selected, requested).length > 0;
+}
+
+/** The workspace to send: the chosen one if it is offered, else the first. Undefined when there is none. */
+export function pickWorkspace<T extends { id: string }>(workspaces: readonly T[], chosen: string | undefined): string | undefined {
+  if (workspaces.length === 0) return undefined;
+  return workspaces.find((w) => w.id === chosen)?.id ?? workspaces[0]!.id;
 }
 
 export function allowSummary(selected: readonly string[], requested: readonly ScopeLike[]): string {
