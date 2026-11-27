@@ -1,6 +1,9 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import Link from "next/link";
+import { usePersonal } from "@/features/personal/api";
+import { showsLockBadge } from "@/features/personal/logic";
 import type { ActivityFeedItem, MentionItem, MyTask, UserSummary } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarStack } from "@/ui/avatar";
@@ -14,8 +17,10 @@ import { activitySentence } from "./activity";
 export function MyTaskRow({ item, card = false }: { item: MyTask; card?: boolean }) {
   const link = useTaskLink();
   const pf = usePrefetchers();
+  const { ids } = usePersonal();
   const t = item.task;
   const tone = dueTone(t);
+  const isPrivate = showsLockBadge(t.project_id, ids);
   return (
     <li>
       <Link
@@ -37,7 +42,17 @@ export function MyTaskRow({ item, card = false }: { item: MyTask; card?: boolean
         <span className="min-w-0 flex-1">
           <span className="block truncate text-13 font-medium text-fg group-hover/r:underline group-hover/r:decoration-fg-faint">{t.title}</span>
           <span className="block truncate text-12 text-fg-muted">
-            {item.project_name} <span className="text-fg-faint">/</span> {item.list_name}
+            {isPrivate ? (
+              <span className="inline-flex items-center gap-1">
+                <Lock className="size-3 shrink-0" aria-hidden />
+                <span>Private</span>
+                <span className="sr-only">, only you can see this task</span>
+              </span>
+            ) : (
+              <>
+                {item.project_name} <span className="text-fg-faint">/</span> {item.list_name}
+              </>
+            )}
             <span className="sr-only">, status {item.status_name}</span>
           </span>
         </span>

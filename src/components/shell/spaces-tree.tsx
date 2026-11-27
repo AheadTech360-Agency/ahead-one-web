@@ -34,6 +34,7 @@ import {
 import { Skeleton } from "@/ui/skeleton";
 import { toast } from "@/ui/toaster";
 import { intent, usePrefetchers } from "@/lib/api/prefetch";
+import { clientSpaces } from "@/features/personal/logic";
 import { Collapse, useLeaving, useRevealOnce, useSettled } from "./sidebar-motion";
 import { SidebarSection } from "./sidebar-section";
 import { sbRow, sbRowActive, sbRowIdle } from "./sidebar-styles";
@@ -134,7 +135,7 @@ export function SpacesTree({ onNavigate }: { onNavigate?: () => void }) {
   const archive = useArchiveNode(workspaceId ?? "");
 
   const expanded = useMemo(() => new Set(expandedList), [expandedList]);
-  const model = useMemo(() => (tree.data ? buildModel(tree.data) : []), [tree.data]);
+  const model = useMemo(() => (tree.data ? buildModel(clientSpaces(tree.data)) : []), [tree.data]);
   const flat = useMemo(() => flatten(model), [model]);
   const byId = useMemo(() => new Map(flat.map((n) => [n.id, n])), [flat]);
 

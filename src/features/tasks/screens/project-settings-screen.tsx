@@ -5,10 +5,11 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import { ArrowLeft, Check, CircleAlert, FolderX, GripVertical, Lock, Globe, MoreHorizontal, Plus, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { findPersonal } from "@/features/personal/logic";
 import { errorMessage, isApiError } from "@/lib/api/client";
-import { useMembers } from "@/lib/api/hooks";
+import { useMembers, useTree } from "@/lib/api/hooks";
 import type { List, ListStatus, Project, ProjectPermission, Role, StatusCategory, UserSummary, Visibility } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { ROLE_LABEL, roleAtLeast, useWorkspace } from "@/lib/workspace";
@@ -58,6 +59,14 @@ const CATEGORY: { value: StatusCategory; label: string; description: string }[] 
 
 export function ProjectSettingsScreen() {
   const { projectId } = useParams<{ projectId: string }>();
+  // A private project has no members or sharing settings: go back to its list.
+  const router = useRouter();
+  const { workspaceId: wsForPersonal } = useWorkspace();
+  const personal = findPersonal(useTree(wsForPersonal).data);
+  const toPersonalList = personal && personal.project.id === projectId ? personal.list.id : undefined;
+  useEffect(() => {
+    if (toPersonalList) router.replace(`/l/${toPersonalList}`);
+  }, [toPersonalList, router]);
   const project = useProject(projectId);
 
   if ((project.isError && project.data === undefined)) {

@@ -53,7 +53,7 @@ function ClientAccessDialog({ member, current, workspaceId, onClose }: { member:
   const tree = useTree(workspaceId);
   const save = useSetMemberClients(workspaceId);
   const name = member.user.full_name || member.user.email;
-  const spaces = useMemo(() => (tree.data ?? []).filter((s) => !s.archived), [tree.data]);
+  const spaces = useMemo(() => (tree.data ?? []).filter((s) => !s.archived && !s.personal), [tree.data]);
   const [all, setAll] = useState(current.all_clients);
   const [picked, setPicked] = useState<string[]>(current.space_ids);
   const byId = useMemo(() => new Map(spaces.map((s) => [s.id, s.name])), [spaces]);

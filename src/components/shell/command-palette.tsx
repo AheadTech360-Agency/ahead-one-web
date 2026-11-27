@@ -10,6 +10,7 @@ import {
   FolderKanban,
   Home,
   Keyboard,
+  Lock,
   MessagesSquare,
   Moon,
   Plus,
@@ -28,6 +29,9 @@ import { useEffect, useState } from "react";
 import { api, errorMessage } from "@/lib/api/client";
 import { useTree } from "@/lib/api/hooks";
 import type { Conversation } from "@/lib/api/types";
+import { usePersonal } from "@/features/personal/api";
+import { clientSpaces } from "@/features/personal/logic";
+import { PrivateTaskDialog } from "@/features/personal/private-task-dialog";
 import { useRecorder } from "@/features/recorder/provider";
 import { useSearch } from "@/features/tasks/api";
 import { canSeeAppRelease } from "@/lib/app-release/format";
@@ -63,6 +67,8 @@ export function CommandPalette() {
   const { workspaceId, role } = useWorkspace();
   const recorder = useRecorder();
   const tree = useTree(workspaceId);
+  const personal = usePersonal();
+  const [privateOpen, setPrivateOpen] = useState(false);
   const [query, setQuery] = useState("");
   const mode = palette.mode;
 
@@ -75,11 +81,13 @@ export function CommandPalette() {
     router.push(href);
   }
 
-  const projects = (tree.data ?? []).flatMap((s) =>
+  const projects = clientSpaces(tree.data).flatMap((s) =>
     s.projects.map((p) => ({ ...p, spaceName: s.name })),
   );
 
   return (
+    <>
+    <PrivateTaskDialog open={privateOpen} onOpenChange={setPrivateOpen} />
     <DialogPrimitive.Root open={palette.open} onOpenChange={(o) => (o ? setPaletteOpen(true) : close())}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-[var(--z-overlay)] bg-overlay data-[state=open]:animate-in-fade" />
@@ -133,6 +141,18 @@ export function CommandPalette() {
                     <Plus aria-hidden /> Create task
                     <Kbd className="ml-auto">C</Kbd>
                   </Command.Item>
+                  {personal.enabled && (
+                    <Command.Item
+                      className={itemClass}
+                      value="add private task personal only me"
+                      onSelect={() => {
+                        close();
+                        setPrivateOpen(true);
+                      }}
+                    >
+                      <Lock aria-hidden /> Add private task
+                    </Command.Item>
+                  )}
                   <Command.Item
                     className={itemClass}
                     value="search tasks find"
@@ -173,6 +193,18 @@ export function CommandPalette() {
                   <Command.Item className={itemClass} onSelect={() => go("/my-tasks")}>
                     <CheckSquare aria-hidden /> My tasks
                   </Command.Item>
+                  {personal.enabled && (
+                    <Command.Item
+                      className={itemClass}
+                      value="my private tasks personal"
+                      onSelect={() => {
+                        close();
+                        void personal.open();
+                      }}
+                    >
+                      <Lock aria-hidden /> My private tasks
+                    </Command.Item>
+                  )}
                   <Command.Item className={itemClass} onSelect={() => go("/inbox")}>
                     <Bell aria-hidden /> Inbox
                   </Command.Item>
@@ -226,6 +258,7 @@ export function CommandPalette() {
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+    </>
   );
 }
 

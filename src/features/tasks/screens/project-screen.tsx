@@ -2,7 +2,11 @@
 
 import { Archive, CircleAlert, FolderX, Globe, Lock, Plus, Settings2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { findPersonal } from "@/features/personal/logic";
+import { useTree } from "@/lib/api/hooks";
+import { useWorkspace } from "@/lib/workspace";
 import { useMemo, useState } from "react";
 import { useShell } from "@/components/shell/shell-context";
 import { intent, usePrefetchers } from "@/lib/api/prefetch";
@@ -27,6 +31,14 @@ export function ProjectScreen() {
   const lists = useProjectLists(projectId);
   const { setCreateTaskOpen } = useShell();
   const project = data.project;
+  // The private project has no project page (no members or settings): send its owner to the list.
+  const router = useRouter();
+  const { workspaceId } = useWorkspace();
+  const personal = findPersonal(useTree(workspaceId).data);
+  const toPersonalList = personal && personal.project.id === projectId ? personal.list.id : undefined;
+  useEffect(() => {
+    if (toPersonalList) router.replace(`/l/${toPersonalList}`);
+  }, [toPersonalList, router]);
 
   if (data.projectStatus === "error") {
     const gone = isApiError(data.projectError) && data.projectError.isNotFound;

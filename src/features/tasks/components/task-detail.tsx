@@ -1,11 +1,14 @@
 "use client";
 
 import { format } from "date-fns";
-import { Check, CircleAlert, CornerLeftUp, Link2, Maximize2, MoreHorizontal, SearchX, Trash2, X } from "lucide-react";
+import { Check, CircleAlert, CornerLeftUp, FolderInput, Link2, Lock, Maximize2, MoreHorizontal, SearchX, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MoveToSharedDialog } from "@/features/personal/move-to-shared";
+import { isPersonalProject } from "@/features/personal/logic";
 import { errorMessage, isApiError } from "@/lib/api/client";
+import { useTree } from "@/lib/api/hooks";
 import type { JsonValue, Task, TaskDetail as TaskDetailData, UserSummary } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
@@ -130,6 +133,7 @@ function DetailBody({
 }) {
   const { task, project, list, statuses } = detail;
   const panel = layout === "panel";
+  const tree = useTree(useWorkspace().workspaceId);
 
   const properties = (
     <dl
@@ -241,10 +245,18 @@ function DetailBody({
               <h2 className="sr-only">Details</h2>
               {properties}
               <p className="border-t border-border-subtle pt-3 text-12 text-fg-muted">
-                In{" "}
-                <Link href={`/p/${project.id}`} className="font-medium text-fg hover:underline">
-                  {project.name}
-                </Link>
+                {isPersonalProject(tree.data, project.id) ? (
+                  <span className="inline-flex items-center gap-1 font-medium text-fg">
+                    <Lock className="size-3.5" aria-hidden /> Private to you
+                  </span>
+                ) : (
+                  <>
+                    In{" "}
+                    <Link href={`/p/${project.id}`} className="font-medium text-fg hover:underline">
+                      {project.name}
+                    </Link>
+                  </>
+                )}
                 . Updated {format(new Date(task.updated_at), "MMM d 'at' h:mm a")}.
               </p>
             </div>
@@ -307,7 +319,10 @@ function Toolbar({
   const router = useRouter();
   const del = useDeleteTask();
   const [confirm, setConfirm] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { workspaceId } = useWorkspace();
+  const isPrivate = isPersonalProject(useTree(workspaceId).data, project.id);
 
   async function copy() {
     try {
@@ -327,10 +342,18 @@ function Toolbar({
       )}
     >
       <nav aria-label="Task location" className="flex min-w-0 flex-1 items-center gap-1 text-12 text-fg-muted">
-        <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: project.color }} />
-        <Link href={`/p/${project.id}`} className="truncate hover:text-fg hover:underline">
-          {project.name}
-        </Link>
+        {isPrivate ? (
+          <Lock className="size-3 shrink-0" aria-hidden />
+        ) : (
+          <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: project.color }} />
+        )}
+        {isPrivate ? (
+          <span className="truncate">Private, only you</span>
+        ) : (
+          <Link href={`/p/${project.id}`} className="truncate hover:text-fg hover:underline">
+            {project.name}
+          </Link>
+        )}
         <span aria-hidden>/</span>
         <Link href={`/l/${list.id}`} className="truncate hover:text-fg hover:underline">
           {list.name}
@@ -352,6 +375,11 @@ function Toolbar({
             </IconButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {isPrivate && !task.parent_task_id && (
+              <DropdownMenuItem onSelect={() => setMoveOpen(true)}>
+                <FolderInput aria-hidden /> Move to a shared project
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem danger onSelect={() => setConfirm(true)}>
               <Trash2 aria-hidden /> Delete task
             </DropdownMenuItem>
@@ -359,6 +387,7 @@ function Toolbar({
         </DropdownMenu>
       )}
       {onClose && <CloseButton onClose={onClose} />}
+      {isPrivate && <MoveToSharedDialog task={task} open={moveOpen} onOpenChange={setMoveOpen} />}
       <ConfirmDialog
         open={confirm}
         onOpenChange={setConfirm}

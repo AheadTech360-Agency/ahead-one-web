@@ -2,7 +2,8 @@
 
 import { CalendarPlus, Check, ChevronDown, UserPlus, X } from "lucide-react";
 import { useMemo } from "react";
-import { useMembers } from "@/lib/api/hooks";
+import { isPersonalProject, personalPeople } from "@/features/personal/logic";
+import { useMembers, useTree } from "@/lib/api/hooks";
 import type { ListStatus, Priority, Task, UserSummary } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { useWorkspace } from "@/lib/workspace";
@@ -25,12 +26,18 @@ import { doneStatusFor, isDoneCategory, openStatusFor, statusesOfList } from "..
 /** People who can be assigned in a project: its members, or the workspace while those load. */
 export function useAssignable(projectId: string | undefined) {
   const { workspaceId } = useWorkspace();
-  const pm = useProjectMembers(projectId);
-  const wm = useMembers(workspaceId);
-  return useMemo<UserSummary[]>(
-    () => pm.data?.map((m) => m.user) ?? wm.data?.map((m) => m.user) ?? [],
-    [pm.data, wm.data],
-  );
+  const { me } = useWorkspace();
+  const tree = useTree(workspaceId);
+  const personal = isPersonalProject(tree.data, projectId);
+  // A private project has no members: the only person who can be assigned is its owner.
+  const pm = useProjectMembers(personal ? undefined : projectId);
+  const wm = useMembers(personal ? undefined : workspaceId);
+  const meId = me?.user.id;
+  return useMemo<UserSummary[]>(() => {
+    if (personal) return personalPeople(me ? { id: me.user.id, full_name: me.user.full_name, email: me.user.email, avatar_url: me.user.avatar_url } : undefined);
+    return pm.data?.map((m) => m.user) ?? wm.data?.map((m) => m.user) ?? [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personal, pm.data, wm.data, meId]);
 }
 
 /** Empty or low-signal controls in dense rows appear on row hover or focus (always on touch). */

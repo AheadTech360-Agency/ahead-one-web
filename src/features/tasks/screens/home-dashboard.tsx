@@ -15,6 +15,7 @@ import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty-state";
 import { Skeleton } from "@/ui/skeleton";
 import { Tooltip } from "@/ui/tooltip";
+import { PrivateTaskButton } from "@/features/personal/private-task-dialog";
 import { FilesCard } from "@/features/files/files-card";
 import { useDashboard } from "../api";
 import { FeedItem, MentionRow, MyTaskRow } from "../components/my-task-row";
@@ -65,13 +66,19 @@ export function HomeDashboard() {
             </span>
           </p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => setCreateTaskOpen(true)}
-          className="border-band-fg bg-band-fg text-navy-deep not-disabled:active:border-band-strong not-disabled:active:bg-band-strong"
-        >
-          <Plus aria-hidden /> New task
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <PrivateTaskButton
+            variant="ghost"
+            className="border border-band-dim/40 text-band-fg hover:bg-white/10 hover:text-band-fg"
+          />
+          <Button
+            variant="primary"
+            onClick={() => setCreateTaskOpen(true)}
+            className="border-band-fg bg-band-fg text-navy-deep not-disabled:active:border-band-strong not-disabled:active:bg-band-strong"
+          >
+            <Plus aria-hidden /> New task
+          </Button>
+        </div>
       </header>
 
       <div className="mt-6 md:mt-8">

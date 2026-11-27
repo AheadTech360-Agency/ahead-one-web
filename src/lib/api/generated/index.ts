@@ -69,6 +69,7 @@ export type * from "./NotificationQuery";
 export type * from "./OwnerAuditItem";
 export type * from "./OwnerExtras";
 export type * from "./Page";
+export type * from "./PersonalProject";
 export type * from "./Priority";
 export type * from "./Profile";
 export type * from "./Project";

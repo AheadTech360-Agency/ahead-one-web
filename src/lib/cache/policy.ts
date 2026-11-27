@@ -9,7 +9,7 @@
  */
 
 /** Bump when a cached response shape changes in a way the API-contract version does not capture. */
-export const CACHE_SCHEMA = "1";
+export const CACHE_SCHEMA = "2";
 
 /** A restored cache older than this is thrown away. In-memory gcTime stays shorter. */
 export const PERSIST_MAX_AGE_MS = 24 * 60 * 60 * 1000;

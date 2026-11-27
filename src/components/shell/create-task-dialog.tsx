@@ -17,6 +17,7 @@ import { Input } from "@/ui/input";
 import { Select } from "@/ui/select";
 import { toast } from "@/ui/toaster";
 import { UserPicker } from "@/ui/user-picker";
+import { clientSpaces } from "@/features/personal/logic";
 import { useShell } from "./shell-context";
 
 /** Quick-create from anywhere (C or the command menu). Posts CreateTask to the chosen list. */
@@ -44,7 +45,7 @@ function CreateTaskForm({ onDone }: { onDone: () => void }) {
   const [assignees, setAssignees] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ title?: string; list?: string; form?: string }>({});
 
-  const listOptions = (tree.data ?? []).flatMap((s) =>
+  const listOptions = clientSpaces(tree.data).flatMap((s) =>
     s.projects
       .filter((p) => !p.archived)
       .flatMap((p) => p.lists.map((l) => ({ value: l.id, label: `${p.name} / ${l.name}`, description: s.name }))),
@@ -56,7 +57,7 @@ function CreateTaskForm({ onDone }: { onDone: () => void }) {
     seg === "l"
       ? listOptions.find((o) => o.value === routeId)?.value
       : seg === "p"
-        ? (tree.data ?? []).flatMap((s) => s.projects).find((p) => p.id === routeId)?.lists[0]?.id
+        ? clientSpaces(tree.data).flatMap((s) => s.projects).find((p) => p.id === routeId)?.lists[0]?.id
         : undefined;
   const listId = picked ?? fromRoute;
   const create = useCreateTask();

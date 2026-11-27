@@ -3,6 +3,7 @@
 import { ArrowRight, CalendarClock, CalendarDays, CircleAlert, ListChecks, Plus } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageBody, PageHeader } from "@/components/page";
+import { PrivateTaskButton } from "@/features/personal/private-task-dialog";
 import { useShell } from "@/components/shell/shell-context";
 import { errorMessage } from "@/lib/api/client";
 import type { MyTask } from "@/lib/api/types";
@@ -52,9 +53,12 @@ export function MyTasksScreen() {
         title="My tasks"
         description="Everything assigned to you, by when it's due."
         actions={
-          <Button variant="primary" onClick={() => setCreateTaskOpen(true)}>
-            <Plus aria-hidden /> New task
-          </Button>
+          <>
+            <PrivateTaskButton />
+            <Button variant="primary" onClick={() => setCreateTaskOpen(true)}>
+              <Plus aria-hidden /> New task
+            </Button>
+          </>
         }
       />
       <Tabs value={tab} onValueChange={setTab} className="mt-5">

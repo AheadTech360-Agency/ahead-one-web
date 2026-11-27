@@ -24,6 +24,11 @@ const STATIC: Record<string, Crumb[]> = {
 
 function fromTree(tree: TreeSpace[] | undefined, kind: "p" | "l", id: string): Crumb[] {
   for (const s of tree ?? []) {
+    if (s.personal) {
+      const hit = s.projects.some((p) => (kind === "p" ? p.id === id : p.lists.some((l) => l.id === id)));
+      if (hit) return [{ label: "My private tasks" }];
+      continue;
+    }
     for (const p of s.projects) {
       if (kind === "p" && p.id === id) {
         return [{ label: s.name, color: s.color }, { label: p.name, color: p.color }];

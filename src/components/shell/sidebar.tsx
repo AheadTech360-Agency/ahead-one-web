@@ -9,6 +9,7 @@ import { intent, usePrefetchers } from "@/lib/api/prefetch";
 import { useBump } from "@/lib/hooks/use-bump";
 import { cn } from "@/lib/utils";
 import { SidebarMessages } from "@/features/messages/sidebar-messages";
+import { PrivateEntry } from "@/features/personal/private-entry";
 import { Tooltip } from "@/ui/tooltip";
 import { useShell } from "./shell-context";
 import { sbLabel, sbRow, sbRowActive, sbRowIdle } from "./sidebar-styles";
@@ -166,7 +167,10 @@ export function SidebarContent({
             <div className="sb-collapse-inner" inert={rail}>
               <div className="mt-5 flex flex-col gap-5 group-data-[rail=true]/sb:whitespace-nowrap">
                 <SidebarMessagesMemo onNavigate={onNavigate} />
-                <SpacesTreeMemo onNavigate={onNavigate} />
+                <div className="flex flex-col gap-1.5">
+                  <PrivateEntry onNavigate={onNavigate} />
+                  <SpacesTreeMemo onNavigate={onNavigate} />
+                </div>
               </div>
             </div>
           </div>
