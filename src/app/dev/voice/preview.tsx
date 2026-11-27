@@ -20,11 +20,11 @@ export function Preview() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 bg-bg p-6">
       <p className="text-13 text-fg-muted">Someone else, not played yet (green dot)</p>
-      <VoiceBubble a={v("a1", [])} mine={false} />
+      <VoiceBubble a={v("a1", [])} mine={false} meId="me" />
       <p className="text-13 text-fg-muted">Mine, not played (grey mic)</p>
-      <VoiceBubble a={v("a2", [])} mine />
+      <VoiceBubble a={v("a2", [])} mine meId="me" />
       <p className="text-13 text-fg-muted">Mine, played by someone (blue mic)</p>
-      <VoiceBubble a={v("a3", ["someone-else"])} mine />
+      <VoiceBubble a={v("a3", ["someone-else"])} mine meId="me" />
     </div>
   );
 }

@@ -211,7 +211,7 @@ export function Attachments({ items }: { items: Attachment[] }) {
     return (
       <div className="mt-1.5 flex flex-col gap-1.5">
         {voices.map((v) => (
-          <VoiceBubble key={v.id} a={v} mine={v.uploader?.id === me?.user.id} />
+          <VoiceBubble key={v.id} a={v} mine={v.uploader?.id === me?.user.id} meId={me?.user.id} />
         ))}
       </div>
     );

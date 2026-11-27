@@ -2,7 +2,6 @@
 
 import { CircleAlert, Mic, Pause, Play, WifiOff } from "lucide-react";
 import { useCallback, useEffect, useReducer, useRef } from "react";
-import { useWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/ui/spinner";
 import { fetchVoiceUrl, reportPlayed } from "./api";
@@ -30,9 +29,7 @@ const FLAT = new Array(64).fill(40);
  * blue mic on mine once someone played it. The signed URL is only requested on the first play and is
  * fetched again after it expires. `/played` is sent once, when someone else's message starts.
  */
-export function VoiceBubble({ a, mine, className }: { a: VoiceAttachment; mine: boolean; className?: string }) {
-  const { me } = useWorkspace();
-  const meId = me?.user.id;
+export function VoiceBubble({ a, mine, meId, className }: { a: VoiceAttachment; mine: boolean; meId: string | undefined; className?: string }) {
   const duration = a.duration_secs ?? 1;
   const [s, dispatch] = useReducer(playerReducer, duration, playerInitial);
   const audio = useRef<HTMLAudioElement | null>(null);
