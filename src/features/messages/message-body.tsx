@@ -4,6 +4,9 @@ import { Download, Play, FileArchive, FileSpreadsheet, FileText, FileVideo, File
 import { useEffect, useRef, useState } from "react";
 import { errorMessage } from "@/lib/api/client";
 import type { Attachment } from "@/lib/api/types";
+import { useWorkspace } from "@/lib/workspace";
+import { asVoice, VOICE_ENABLED } from "@/features/voice/contract";
+import { VoiceBubble } from "@/features/voice/voice-bubble";
 import { cn } from "@/lib/utils";
 import { toast } from "@/ui/toaster";
 import { MediaPlayer } from "@/features/files/media-player";
@@ -201,7 +204,18 @@ function MediaCard({ a }: { a: Attachment }) {
 }
 
 export function Attachments({ items }: { items: Attachment[] }) {
+  const { me } = useWorkspace();
   if (items.length === 0) return null;
+  const voices = VOICE_ENABLED ? items.flatMap((a) => (asVoice(a) ? [asVoice(a)!] : [])) : [];
+  if (voices.length === items.length) {
+    return (
+      <div className="mt-1.5 flex flex-col gap-1.5">
+        {voices.map((v) => (
+          <VoiceBubble key={v.id} a={v} mine={v.uploader?.id === me?.user.id} />
+        ))}
+      </div>
+    );
+  }
   const images = items.filter((a) => a.mime.startsWith("image/"));
   const media = items.filter((a) => a.mime.startsWith("video/") || a.mime.startsWith("audio/"));
   const files = items.filter((a) => !a.mime.startsWith("image/") && !a.mime.startsWith("video/") && !a.mime.startsWith("audio/"));

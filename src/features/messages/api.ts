@@ -279,7 +279,7 @@ export function useMarkRead() {
 
 export const MAX_ATTACHMENTS = 10;
 
-function putWithProgress(url: string, file: File, mime: string, onProgress: (f: number) => void, signal: AbortSignal) {
+export function putWithProgress(url: string, file: Blob, mime: string, onProgress: (f: number) => void, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);

@@ -22,6 +22,8 @@ import { Spinner } from "@/ui/spinner";
 import { toast } from "@/ui/toaster";
 import { RecordIconButton } from "@/features/recorder/record-button";
 import { useRealtimeSend } from "@/features/realtime/provider";
+import { VOICE_ENABLED } from "@/features/voice/contract";
+import { useVoiceMessage } from "@/features/voice/voice-composer";
 import { ACCEPT, checkFile } from "@/lib/files/limits";
 import { MAX_ATTACHMENTS, uploadAttachment } from "./api";
 import { displayName, encodeMentions, formatBytes } from "./format";
@@ -199,6 +201,10 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
   }
 
   useImperativeHandle(ref, () => ({ addFiles, focus: () => area.current?.focus() }), [addFiles]);
+
+  // Voice: a finished, uploaded recording goes out at once as a message with an empty body.
+  const voice = useVoiceMessage(conversationId, (att) => onSubmit("", [att]));
+  const voiceOn = VOICE_ENABLED && !isEdit && !disabled;
 
   const busy = uploads.some((u) => u.status === "uploading");
   const failedUploads = uploads.some((u) => u.status === "error");
@@ -401,6 +407,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
             ))}
           </ul>
         )}
+        {voiceOn && voice.active && voice.strip}
         <label className="sr-only" htmlFor={`${listId}-input`}>
           {placeholder}
         </label>
@@ -425,7 +432,10 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
           aria-activedescendant={popupOpen ? `${listId}-${highlight}` : undefined}
           aria-autocomplete="list"
           aria-invalid={tooLong || undefined}
-          className="block max-h-60 min-h-10 w-full resize-none bg-transparent px-3 py-2.5 text-14 leading-[22px] text-fg outline-none placeholder:text-fg-faint disabled:cursor-not-allowed"
+          className={cn(
+            "block max-h-60 min-h-10 w-full resize-none bg-transparent px-3 py-2.5 text-14 leading-[22px] text-fg outline-none placeholder:text-fg-faint disabled:cursor-not-allowed",
+            voiceOn && voice.recording && "hidden",
+          )}
         />
         <div className="flex items-center gap-1 px-1.5 pb-1.5">
           {!isEdit && (
@@ -489,6 +499,8 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
                 Save
               </Button>
             </>
+          ) : voiceOn && !voice.active && trimmed.length === 0 && uploads.length === 0 ? (
+            voice.micButton
           ) : (
             <button
               type="button"

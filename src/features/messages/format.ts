@@ -1,3 +1,5 @@
+import { asVoice } from "../voice/contract.ts";
+import { voiceLabel } from "../voice/logic.ts";
 import { format, isSameDay, isToday, isYesterday } from "date-fns";
 import type { Conversation, Message, UserSummary } from "@/lib/api/types";
 
@@ -76,7 +78,9 @@ export function previewOf(m: Message | null | undefined, people: People, meId: s
   const body =
     text ||
     (m.attachments.length === 1
-      ? m.attachments[0].filename
+      ? asVoice(m.attachments[0])
+        ? voiceLabel(m.attachments[0].duration_secs)
+        : m.attachments[0].filename
       : m.attachments.length > 1
         ? `${m.attachments.length} files`
         : "");

@@ -13,6 +13,7 @@ import {
   markMessageDeleted,
   upsertMessage,
 } from "@/features/messages/cache";
+import { applyVoicePlayed, isVoicePlayedEvent } from "@/features/voice/cache";
 import { clearTyping, isReadingConversation, noteTyping, pendingStore } from "@/features/messages/stores";
 import { addNotification } from "@/features/notifications/cache";
 import { RealtimeClient, socketUrl, type RealtimeStatus } from "./socket";
@@ -28,6 +29,11 @@ function sessionToken(opts?: { refresh?: boolean; fresh?: boolean }) {
 
 /** Keep TanStack Query caches in step with server events. */
 function applyEvent(qc: QueryClient, ev: WsServerEvent, meId: string | null) {
+  // `voice.played` is not in the generated frame type yet (see features/voice/contract.ts).
+  if (isVoicePlayedEvent(ev)) {
+    applyVoicePlayed(qc, ev);
+    return;
+  }
   switch (ev.type) {
     case "message.created": {
       const m = ev.message;
