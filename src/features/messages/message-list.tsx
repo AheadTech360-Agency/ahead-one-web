@@ -433,11 +433,21 @@ export function MessageList({
     if (pendingCount > 0) scroller.current?.scrollTo({ top: 0 });
   }, [pendingCount]);
 
+  // A new message while you are at the bottom keeps you at the bottom. The browser's own pinning only holds
+  // when you are exactly at 0; a few pixels up it leaves the view where it was (the new message lands below
+  // the fold). `following` is the position before this render: the scroll event for the layout change has not
+  // fired yet when this layout effect runs, so it still holds the old value.
+  const following = useRef(true);
+  useLayoutEffect(() => {
+    if (following.current) scroller.current?.scrollTo({ top: 0 });
+  }, [newest?.id]);
+
   function onScroll() {
     const el = scroller.current;
     if (!el) return;
     // column-reverse: 0 at the bottom, negative as you scroll up.
     const bottom = Math.abs(el.scrollTop) < 80;
+    following.current = bottom;
     if (bottom !== atBottom) {
       setAtBottom(bottom);
       onAtBottomChange(bottom);
